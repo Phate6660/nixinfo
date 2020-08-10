@@ -1,8 +1,11 @@
 [package]
 name = "nixinfo"
+description = "A lib crate for gathering system info such as cpu, distro, environment, kernel, etc in Rust."
+homepage = "https://github.com/Phate6660/nixinfo"
 version = "0.1.0"
 authors = ["Ash <valleyknight@protonmail.com>"]
 edition = "2018"
+license = "Unlicense"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
