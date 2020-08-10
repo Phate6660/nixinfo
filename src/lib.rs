@@ -145,7 +145,8 @@ pub fn music() -> String {
     format!("{} - {} ({}) - {}", art, alb, dat, tit)
 }
 
-#[cfg(feature = "nomusic")]
+#[cfg(not(feature = "music"))]
+/// If the music feature is enabled, it connects to mpd, and obtains music info in the format "artist - album (date) - title", outputs to a string
 pub fn music() -> String {
     "N/A (music feature must be used to pull in the mpd dependency)".to_string()
 }
