@@ -1,35 +1,28 @@
 use glob::glob;
 use std::env;
 use std::fs::{metadata, read_to_string, File};
-use std::io::{BufReader, Read};
-use std::process::{Command, Output};
+use std::process::Command;
 
-// Shared functions for the lib
-fn read(file: File) -> Result<String, Box<dyn std::error::Error>> {
-    let mut buf_reader = BufReader::new(file);
-    let mut contents = String::new();
-    buf_reader.read_to_string(&mut contents)?;
-    Ok(contents)
-}
+mod cpu;
+use cpu::{format, get};
 
-fn line(file: File, line: usize) -> String {
-    let contents = read(file).unwrap();
-    let file_vector: Vec<&str> = contents.split('\n').collect();
-    file_vector[line].to_string()
-}
+mod distro;
+use distro::dist;
 
-// CPU info
-fn get(file: File, x: usize) -> String {
-    let line = line(file, x);
-    let line_vec: Vec<&str> = line.split(':').collect();
-    line_vec[1].to_string()
-}
+mod environment;
+use environment::{de, wm};
 
-fn format(info: String) -> String {
-    info.replace("(TM)", "")
-        .replace("(R)", "")
-        .replace("     ", " ")
-}
+mod packages;
+use packages::count;
+
+mod shared_functions;
+use shared_functions::{line, read};
+
+mod terminal;
+use terminal::{info, name, ppid};
+
+mod uptime;
+use uptime::duration;
 
 /// Obtain the temp of the CPU, only tested on rpi, outputs to a string
 pub fn temp() -> String {
@@ -66,7 +59,6 @@ pub fn cpu() -> String {
     }
 }
 
-// Device info
 /// Obtain name of device, outputs to a string
 pub fn device() -> String {
     if metadata("/sys/devices/virtual/dmi/id/product_name").is_ok() {
@@ -76,14 +68,6 @@ pub fn device() -> String {
     } else {
         "N/A (could not obtain name of device)".to_string()
     }
-}
-
-// Distro info
-fn dist(path: &str) -> String {
-    let file = File::open(path).unwrap();
-    let line: String = line(file, 0); // Expects NAME= to be on first line
-    let distro_vec: Vec<&str> = line.split('=').collect();
-    String::from(distro_vec[1])
 }
 
 /// Obtain the distro name, outputs to a string
@@ -99,26 +83,6 @@ pub fn distro() -> String {
     }
 }
 
-// Environment info
-fn de() -> String {
-    env::var("XDG_DESKTOP_SESSION")
-        .or_else(|_| env::var("XDG_CURRENT_DESKTOP"))
-        .or_else(|_| env::var("DESKTOP_SESSION"))
-        .unwrap_or_else(|_| "N/A".to_string())
-}
-
-fn wm() -> String {
-    let path = format!("{}/.xinitrc", env::var("HOME").unwrap());
-    if std::fs::metadata(&path).is_ok() {
-        let file = File::open(&path).unwrap();
-        let contents = read(file).unwrap();
-        let line = contents.lines().last().unwrap();
-        line.split(' ').last().unwrap().to_string()
-    } else {
-        "N/A (could not open $HOME/.xinitrc)".to_string()
-    }
-}
-
 /// Obtains the name of the user's DE or WM, outputs to a string
 pub fn environment() -> String {
     let de = de();
@@ -129,14 +93,12 @@ pub fn environment() -> String {
     }
 }
 
-// Env variables
-/// Obtain the contents of an env variable, outputs to a string
+/// Obtain the contents of the env variable specified as an arg, outputs to a string
 pub fn env(var: String) -> String {
     // $SHELL and $USER are set automatically, the only env variable it would fail on is $EDITOR
     env::var(var).expect("Could not read $EDITOR, are you sure it's set?")
 }
 
-// Hostname
 /// Obtain the hostname, outputs to a string
 pub fn hostname() -> String {
     if metadata("/etc/hostname").is_ok() {
@@ -146,7 +108,6 @@ pub fn hostname() -> String {
     }
 }
 
-// Kernel version
 /// Obtain the kernel version, outputs to a string
 pub fn kernel() -> String {
     if metadata("/proc/sys/kernel/osrelease").is_ok() {
@@ -156,7 +117,6 @@ pub fn kernel() -> String {
     }
 }
 
-// Memory info
 /// Obtain total memory in MBs, outputs to a string
 pub fn memory() -> String {
     if metadata("/proc/meminfo").is_ok() {
@@ -172,8 +132,8 @@ pub fn memory() -> String {
 }
 
 // Music info
-/// Connects to mpd, and obtains music info in the format "artist - album (date) - title", outputs to a string
 #[cfg(feature = "music")]
+/// Connects to mpd, and obtains music info in the format "artist - album (date) - title", outputs to a string
 pub fn music() -> String {
     let mut c = mpd::Client::connect("127.0.0.1:6600").unwrap();
     let song: mpd::Song = c.currentsong().unwrap().unwrap();
@@ -188,13 +148,6 @@ pub fn music() -> String {
 #[cfg(feature = "nomusic")]
 pub fn music() -> String {
     "N/A (music feature must be used to pull in the mpd dependency)".to_string()
-}
-
-// Package info
-fn count(output: Output) -> usize {
-    let raw_list = String::from_utf8_lossy(&output.stdout);
-    let list: Vec<&str> = raw_list.split('\n').collect();
-    list.iter().count() - 1 // -1 to deal with newline at end of output
 }
 
 /// Obtain list of packages based on what manager is given as an arg, outputs to a string
@@ -288,46 +241,6 @@ pub fn packages(manager: &str) -> String {
     }
 }
 
-// Terminal info
-fn ppid(file: File) -> String {
-    let ppid = line(file, 6);
-    ppid.split(':').collect::<Vec<&str>>()[1].to_string()
-}
-
-fn name(ppid: String) -> String {
-    let path = format!("/proc/{}/status", ppid.trim());
-    let file = File::open(path).unwrap();
-    let line = line(file, 0);
-    line.split(':').collect::<Vec<&str>>()[1].to_string()
-}
-
-fn info(process_name: String, process_id: String) -> String {
-    if process_name.ends_with("sh")
-        || process_name == "ion"
-        || process_name == "screen"
-        || process_name == "tmux"
-        || process_name.starts_with("tmux")
-    {
-        let path = format!("/proc/{}/status", process_id);
-        let new_ppid = ppid(File::open(path).unwrap()).trim().replace("\n", "");
-        let new_name = name(new_ppid.clone()).trim().replace("\n", "");
-        if new_name.ends_with("sh")
-            || new_name == "ion"
-            || new_name == "screen"
-            || new_name == "tmux"
-            || new_name.starts_with("tmux")
-        {
-            let path = format!("/proc/{}/status", new_ppid);
-            let new_ppid = ppid(File::open(path).unwrap()).trim().replace("\n", "");
-            name(new_ppid).trim().replace("\n", "")
-        } else {
-            new_name.trim().replace("\n", "")
-        }
-    } else {
-        process_name.trim().replace("\n", "")
-    }
-}
-
 /// Obtain the name of the terminal being used, outputs to a string
 pub fn terminal() -> String {
     let id = std::process::id();
@@ -345,29 +258,6 @@ pub fn terminal() -> String {
     } else {
         format!("N/A (could not read {})", path)
     }
-}
-
-// Uptime
-fn duration(uptime: i64) -> (String, String, String) {
-    let days = if uptime > 86400 {
-        let days_pre = uptime / 60 / 60 / 24;
-        days_pre.to_string() + "d"
-    } else {
-        "".to_string()
-    };
-    let hours = if uptime > 3600 {
-        let hours_pre = (uptime / 60 / 60) % 24;
-        hours_pre.to_string() + "h"
-    } else {
-        "".to_string()
-    };
-    let minutes = if uptime > 60 {
-        let minutes_pre = (uptime / 60) % 60;
-        minutes_pre.to_string() + "m"
-    } else {
-        "".to_string()
-    };
-    (days, hours, minutes)
 }
 
 /// Obtains the current uptime of the system, outputs to a string
