@@ -14,3 +14,7 @@ A lib crate for gathering system info such as cpu, distro, environment, kernel, 
 - Package counts (managers supported are apk, apt, dnf, dpkg, eopkg, pacman, pip, portage, rpm, and xbps)
 - Terminal being used (unless tmux is used, in which case N/A will be outputted because reasons)
 - Uptime of device
+
+## TODO
+
+- Obtain used memory in addition to total memory
