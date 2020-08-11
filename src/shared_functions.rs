@@ -10,6 +10,5 @@ pub fn read(file: File) -> Result<String, Box<dyn std::error::Error>> {
 
 pub fn line(file: File, line: usize) -> String {
     let contents = read(file).unwrap();
-    let file_vector: Vec<&str> = contents.split('\n').collect();
-    file_vector[line].to_string()
+    contents.split('\n').collect::<Vec<&str>>()[line].to_string()
 }

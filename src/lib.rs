@@ -223,10 +223,7 @@ pub fn packages(manager: &str) -> String {
                 .expect("Could not run xbps-query.");
             format!("{}", packages::count(output))
         }
-        _ => format!(
-            "N/A ({} is not supported, please file a bug to get it added!)",
-            manager
-        ),
+        _ => format!("N/A ({} is not supported, please file a bug to get it added!)", manager),
     }
 }
 
@@ -235,12 +232,15 @@ pub fn terminal() -> String {
     let id = std::process::id();
     let path = format!("/proc/{}/status", id);
     if metadata(path.clone()).is_ok() {
-        let process_id = terminal::ppid(File::open(path).unwrap()).trim().replace("\n", "");
-        let process_name = terminal::name(process_id.clone()).trim().replace("\n", "");
+        let process_id = terminal::ppid(File::open(path).unwrap())
+            .trim()
+            .replace("\n", "");
+        let process_name = terminal::name(process_id.clone())
+            .trim()
+            .replace("\n", "");
         let info = terminal::info(process_name, process_id);
         if info == "systemd" || info == "" {
-            "N/A (could not determine the terminal, this could be an issue of using tmux)"
-                .to_string()
+            "N/A (could not determine the terminal, this could be an issue of using tmux)".to_string()
         } else {
             info
         }
