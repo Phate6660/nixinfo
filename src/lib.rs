@@ -4,25 +4,13 @@ use std::fs::{metadata, read_to_string, File};
 use std::process::Command;
 
 mod cpu;
-use cpu::{format, get};
-
 mod distro;
-use distro::dist;
-
 mod environment;
-use environment::{de, wm};
-
 mod packages;
-use packages::count;
-
 mod shared_functions;
 use shared_functions::{line, read};
-
 mod terminal;
-use terminal::{info, name, ppid};
-
 mod uptime;
-use uptime::duration;
 
 /// Obtain the temp of the CPU, only tested on rpi, outputs to a string
 pub fn temp() -> String {
@@ -44,15 +32,15 @@ pub fn cpu() -> String {
                 .unwrap()
                 .starts_with("Raspberry")
             {
-                let info = get(file, 1); // Line 2
-                format(info)
+                let info = cpu::get(file, 1); // Line 2
+                cpu::format(info)
             } else {
-                let info = get(file, 4); // Line 5
-                format(info)
+                let info = cpu::get(file, 4); // Line 5
+                cpu::format(info)
             }
         } else {
-            let info = get(file, 4); // Line 5
-            format(info)
+            let info = cpu::get(file, 4); // Line 5
+            cpu::format(info)
         }
     } else {
         "N/A (could not read /proc/cpuinfo)".to_string()
@@ -73,11 +61,11 @@ pub fn device() -> String {
 /// Obtain the distro name, outputs to a string
 pub fn distro() -> String {
     if metadata("/bedrock/etc/os-release").is_ok() {
-        dist("/bedrock/etc/os-release")
+        distro::dist("/bedrock/etc/os-release")
     } else if metadata("/etc/os-release").is_ok() {
-        dist("/etc/os-release")
+        distro::dist("/etc/os-release")
     } else if metadata("/usr/lib/os-release").is_ok() {
-        dist("/usr/lib/os-release")
+        distro::dist("/usr/lib/os-release")
     } else {
         "N/A (could not obtain distro name, please file a bug as your os-release file may just be in a weird place)".to_string()
     }
@@ -85,9 +73,9 @@ pub fn distro() -> String {
 
 /// Obtains the name of the user's DE or WM, outputs to a string
 pub fn environment() -> String {
-    let de = de();
+    let de = environment::de();
     if de == "N/A" {
-        wm()
+        environment::wm()
     } else {
         de
     }
@@ -96,7 +84,7 @@ pub fn environment() -> String {
 /// Obtain the contents of the env variable specified as an arg, outputs to a string
 pub fn env(var: String) -> String {
     // $SHELL and $USER are set automatically, the only env variable it would fail on is $EDITOR
-    env::var(var).expect("Could not read $EDITOR, are you sure it's set?")
+    env::var(var).unwrap_or_else(|_| "N/A (could not read $EDITOR, are you sure it's set?)".to_string())
 }
 
 /// Obtain the hostname, outputs to a string
@@ -159,49 +147,49 @@ pub fn packages(manager: &str) -> String {
                 .arg("info")
                 .output()
                 .expect("Could not run apk.");
-            format!("{}", count(output))
+            format!("{}", packages::count(output))
         }
         "apt" => {
             let output = Command::new("apt")
                 .args(&["list", "--installed"])
                 .output()
                 .expect("Could not run apt.");
-            format!("{}", count(output) - 1) // -1 to deal with "Listing..."
+            format!("{}", packages::count(output) - 1) // -1 to deal with "Listing..."
         }
         "dnf" => {
             let output = Command::new("dnf")
                 .args(&["list", "installed"])
                 .output()
                 .expect("Could not run dnf.");
-            format!("{}", count(output))
+            format!("{}", packages::count(output))
         }
         "dpkg" => {
             let output = Command::new("dpkg-query")
                 .args(&["-f", "'${binary:Package}\n'", "-W"])
                 .output()
                 .expect("Could not run dpkg-query.");
-            format!("{}", count(output))
+            format!("{}", packages::count(output))
         }
         "eopkg" => {
             let output = Command::new("eopkg")
                 .arg("list-installed")
                 .output()
                 .expect("Could not run eopkg.");
-            format!("{}", count(output))
+            format!("{}", packages::count(output))
         }
         "pacman" => {
             let output = Command::new("pacman")
                 .args(&["-Q", "-q"])
                 .output()
                 .expect("Could not run pacman.");
-            format!("{}", count(output))
+            format!("{}", packages::count(output))
         }
         "pip" => {
             let output = Command::new("pip")
                 .arg("list")
                 .output()
                 .expect("Could not run pip.");
-            format!("{}", count(output) - 2) // -2 to deal with header lines in output
+            format!("{}", packages::count(output) - 2) // -2 to deal with header lines in output
         }
         "portage" => {
             let content = read(File::open("/var/lib/portage/world").unwrap()).unwrap();
@@ -226,14 +214,14 @@ pub fn packages(manager: &str) -> String {
                 .args(&["-q", "-a"])
                 .output()
                 .expect("Could not run rpm.");
-            format!("{}", count(output))
+            format!("{}", packages::count(output))
         }
         "xbps" => {
             let output = Command::new("xbps-query")
                 .arg("list-installed")
                 .output()
                 .expect("Could not run xbps-query.");
-            format!("{}", count(output))
+            format!("{}", packages::count(output))
         }
         _ => format!(
             "N/A ({} is not supported, please file a bug to get it added!)",
@@ -247,9 +235,9 @@ pub fn terminal() -> String {
     let id = std::process::id();
     let path = format!("/proc/{}/status", id);
     if metadata(path.clone()).is_ok() {
-        let process_id = ppid(File::open(path).unwrap()).trim().replace("\n", "");
-        let process_name = name(process_id.clone()).trim().replace("\n", "");
-        let info = info(process_name, process_id);
+        let process_id = terminal::ppid(File::open(path).unwrap()).trim().replace("\n", "");
+        let process_name = terminal::name(process_id.clone()).trim().replace("\n", "");
+        let info = terminal::info(process_name, process_id);
         if info == "systemd" || info == "" {
             "N/A (could not determine the terminal, this could be an issue of using tmux)"
                 .to_string()
@@ -267,7 +255,7 @@ pub fn uptime() -> String {
         let raw_uptime = read_to_string("/proc/uptime").unwrap();
         let uptime_vec: Vec<&str> = raw_uptime.split('.').collect();
         let uptime = uptime_vec[0].parse::<i64>().unwrap();
-        let (days, hours, minutes) = duration(uptime);
+        let (days, hours, minutes) = uptime::duration(uptime);
         format!("{} {} {}", days, hours, minutes).trim().to_string()
     } else {
         "N/A (could not obtain read /proc/uptime)".to_string()
