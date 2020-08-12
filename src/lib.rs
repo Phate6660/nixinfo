@@ -87,6 +87,15 @@ pub fn env(var: String) -> String {
     env::var(var).unwrap_or_else(|_| "N/A (could not read $EDITOR, are you sure it's set?)".to_string())
 }
 
+/// Obtain the name of the GPU, outputs to a string
+pub fn gpu() -> String {
+    let output = Command::new("sh")
+        .args(&["-c", "lspci | grep -I 'VGA\\|Display\\|3D'"])
+        .output()
+        .expect("Could not run `lspci | grep -I 'VGA\\|Display\\|3D'`, are you sure `lspci` and `grep` are installed?");
+    String::from_utf8_lossy(&output.stdout).split(':').collect::<Vec<&str>>()[2].trim().to_string()
+}
+
 /// Obtain the hostname, outputs to a string
 pub fn hostname() -> String {
     if metadata("/etc/hostname").is_ok() {

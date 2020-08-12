@@ -8,6 +8,7 @@ A lib crate for gathering system info such as cpu, distro, environment, kernel, 
 - Device name
 - Environment (e.g. DE or WM)
 - env variables
+- GPU info (requires `lspci` and `grep` to be installed for now until I find a pure rust solution)
 - Hostname
 - Total memory in MBs
 - Music info (only mpd is supported, requires `music` feature to be enabled)
