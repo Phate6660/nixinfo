@@ -93,7 +93,12 @@ pub fn gpu() -> String {
         .args(&["-c", "lspci | grep -I 'VGA\\|Display\\|3D'"])
         .output()
         .expect("Could not run `lspci | grep -I 'VGA\\|Display\\|3D'`, are you sure `lspci` and `grep` are installed?");
-    String::from_utf8_lossy(&output.stdout).split(':').collect::<Vec<&str>>()[2].trim().to_string()
+    let model = String::from_utf8_lossy(&output.stdout).split(':').collect::<Vec<&str>>()[2].trim().to_string();
+    if model.starts_with("Advanced Micro Devices, Inc.") {
+        model.split('.').collect::<Vec<&str>>()[1].trim().replace("[", "").replace("]", "").to_string()
+    } else {
+        model
+    }
 }
 
 /// Obtain the hostname, outputs to a string
