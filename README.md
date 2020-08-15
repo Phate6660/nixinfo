@@ -1,20 +1,34 @@
 ## nixinfo
 A lib crate for gathering system info such as cpu, distro, environment, kernel, etc in Rust.
 
+To use: `nixinfo = "0.1.6"` in your `Cargo.toml`.
+
 ## Currently supported
 
 - CPU model and temperature
+  + `nixinfo::cpu()` and `nixinfo::temp()` respectively
 - Distro name
+  + `nixinfo::distro()`
 - Device name
+  + `nixinfo::device()`
 - Environment (e.g. DE or WM)
-- env variables
+  + `nixinfo::environment()`
+- env variables [todo: make it accept str instead of string]
+  + `nixinfo::env("VARIABLE".to_string())`
 - GPU info (requires `lspci` and `grep` to be installed for now until I find a pure rust solution)
+  + `nixinfo::gpu()`
 - Hostname
+  + `nixinfo::hostname()`
 - Total memory in MBs
+  + `nixinfo::memory()`
 - Music info (only mpd is supported, requires `music` feature to be enabled)
+  + `nixinfo::music()`
 - Package counts (managers supported are apk, apt, dnf, dpkg, eopkg, pacman, pip, portage, rpm, and xbps)
+  + `nixinfo::packages("manager")`
 - Terminal being used (unless tmux is used, in which case N/A will be outputted because reasons)
+  + `nixnfo::terminal()`
 - Uptime of device
+  + `nixinfo::uptime()`
 
 ## TODO
 
