@@ -82,7 +82,7 @@ pub fn environment() -> String {
 }
 
 /// Obtain the contents of the env variable specified as an arg, outputs to a string
-pub fn env(var: String) -> String {
+pub fn env(var: &str) -> String {
     // $SHELL and $USER are set automatically, the only env variable it would fail on is $EDITOR
     env::var(var).unwrap_or_else(|_| "N/A (could not read $EDITOR, are you sure it's set?)".to_string())
 }
