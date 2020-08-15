@@ -3,6 +3,8 @@ A lib crate for gathering system info such as cpu, distro, environment, kernel, 
 
 To use: `nixinfo = "0.1.7"` in your `Cargo.toml`.
 
+Every function will output to a String for easy usage.
+
 ## Currently supported
 
 - CPU model and temperature
