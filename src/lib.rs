@@ -36,11 +36,11 @@ pub fn cpu() -> String {
                 cpu::format(info).trim().to_string().replace("\n", "")
             } else {
                 let info = cpu::get(file, 4); // Line 5
-                cpu::format(info)
+                cpu::format(info).trim().to_string().replace("\n", "")
             }
         } else {
             let info = cpu::get(file, 4); // Line 5
-            cpu::format(info)
+            cpu::format(info).trim().to_string().replace("\n", "")
         }
     } else {
         "N/A (could not read /proc/cpuinfo)".to_string()
