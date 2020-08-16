@@ -33,7 +33,7 @@ pub fn cpu() -> String {
                 .starts_with("Raspberry")
             {
                 let info = cpu::get(file, 1); // Line 2
-                cpu::format(info)
+                cpu::format(info).trim().to_string().replace("\n", "")
             } else {
                 let info = cpu::get(file, 4); // Line 5
                 cpu::format(info)
@@ -50,9 +50,9 @@ pub fn cpu() -> String {
 /// Obtain name of device, outputs to a string
 pub fn device() -> String {
     if metadata("/sys/devices/virtual/dmi/id/product_name").is_ok() {
-        read_to_string("/sys/devices/virtual/dmi/id/product_name").unwrap()
+        read_to_string("/sys/devices/virtual/dmi/id/product_name").unwrap().trim().to_string().replace("\n", "")
     } else if metadata("/sys/firmware/devicetree/base/model").is_ok() {
-        read_to_string("/sys/firmware/devicetree/base/model").unwrap()
+        read_to_string("/sys/firmware/devicetree/base/model").unwrap().trim().to_string().replace("\n", "")
     } else {
         "N/A (could not obtain name of device)".to_string()
     }
@@ -95,16 +95,16 @@ pub fn gpu() -> String {
         .expect("Could not run `lspci | grep -I 'VGA\\|Display\\|3D'`, are you sure `lspci` and `grep` are installed?");
     let model = String::from_utf8_lossy(&output.stdout).split(':').collect::<Vec<&str>>()[2].trim().to_string();
     if model.starts_with("Advanced Micro Devices, Inc.") {
-        model.split('.').collect::<Vec<&str>>()[1].trim().replace("[", "").replace("]", "").to_string()
+        model.split('.').collect::<Vec<&str>>()[1].trim().replace("[", "").replace("]", "").to_string().replace("\n", "")
     } else {
-        model
+        model.replace("\n", "")
     }
 }
 
 /// Obtain the hostname, outputs to a string
 pub fn hostname() -> String {
     if metadata("/etc/hostname").is_ok() {
-        read_to_string("/etc/hostname").unwrap()
+        read_to_string("/etc/hostname").unwrap().trim().to_string()
     } else {
         "N/A (could not read /etc/hostname)".to_string()
     }
@@ -113,7 +113,7 @@ pub fn hostname() -> String {
 /// Obtain the kernel version, outputs to a string
 pub fn kernel() -> String {
     if metadata("/proc/sys/kernel/osrelease").is_ok() {
-        read_to_string("/proc/sys/kernel/osrelease").unwrap()
+        read_to_string("/proc/sys/kernel/osrelease").unwrap().trim().to_string().replace("\n", "")
     } else {
         "N/A (could not obtain kernel version)".to_string()
     }
