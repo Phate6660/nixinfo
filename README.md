@@ -3,34 +3,35 @@ A lib crate for gathering system info such as cpu, distro, environment, kernel, 
 
 To use: `nixinfo = "0.1.9"` in your `Cargo.toml`.
 
-Every function will output to a String for easy usage.
-
 ## Currently supported
 
 - CPU model and temperature
-  + `nixinfo::cpu()` and `nixinfo::temp()` respectively
-- Distro name
-  + `nixinfo::distro()`
+  + `nixinfo::cpu()` -> `Result<String>`
+  + `nixinfo::temp()` -> `Result<String>`
 - Device name
-  + `nixinfo::device()`
+  + `nixinfo::device()` -> `String`
+- Distro name
+  + `nixinfo::distro()` -> `String`
 - Environment (e.g. DE or WM)
-  + `nixinfo::environment()`
+  + `nixinfo::environment()` -> `String`
 - env variables
-  + `nixinfo::env("VARIABLE")`
+  + `nixinfo::env("VARIABLE")` -> `String`
 - GPU info (requires `lspci` and `grep` to be installed for now until I find a pure rust solution)
-  + `nixinfo::gpu()`
+  + `nixinfo::gpu()` -> `String`
 - Hostname
-  + `nixinfo::hostname()`
+  + `nixinfo::hostname()` -> `Result<String>`
+- Kernel
+  + `nixinfo::kernel()` -> `Result<String>`
 - Total memory in MBs
-  + `nixinfo::memory()`
+  + `nixinfo::memory()` -> `Result<String>`
 - Music info (only mpd is supported, requires `music` feature to be enabled)
-  + `nixinfo::music()`
+  + `nixinfo::music()` -> `String`
 - Package counts (managers supported are apk, apt, dnf, dpkg, eopkg, pacman, pip, portage, rpm, and xbps)
-  + `nixinfo::packages("manager")`
+  + `nixinfo::packages("manager")` -> `String`
 - Terminal being used (unless tmux is used, in which case N/A will be outputted because reasons)
-  + `nixnfo::terminal()`
+  + `nixnfo::terminal()` -> `String`
 - Uptime of device
-  + `nixinfo::uptime()`
+  + `nixinfo::uptime()` -> `Result<String>`
 
 ## TODO
 
