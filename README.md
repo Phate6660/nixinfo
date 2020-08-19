@@ -29,7 +29,7 @@ To use: `nixinfo = "0.1.9"` in your `Cargo.toml`.
 - Package counts (managers supported are apk, apt, dnf, dpkg, eopkg, pacman, pip, portage, rpm, and xbps)
   + `nixinfo::packages("manager")` -> `String`
 - Terminal being used (unless tmux is used, in which case N/A will be outputted because reasons)
-  + `nixnfo::terminal()` -> `String`
+  + `nixnfo::terminal()` -> `Result<String>`
 - Uptime of device
   + `nixinfo::uptime()` -> `Result<String>`
 

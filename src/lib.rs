@@ -220,25 +220,21 @@ pub fn packages(manager: &str) -> String {
     }
 }
 
-/// Obtain the name of the terminal being used, outputs to a string
-pub fn terminal() -> String {
+/// Obtain the name of the terminal being used, outputs to a Result<String>
+pub fn terminal() -> io::Result<String> {
     let id = std::process::id();
     let path = format!("/proc/{}/status", id);
-    if metadata(path.clone()).is_ok() {
-        let process_id = terminal::ppid(File::open(path).unwrap())
-            .trim()
-            .replace("\n", "");
-        let process_name = terminal::name(process_id.clone())
-            .trim()
-            .replace("\n", "");
-        let info = terminal::info(process_name, process_id);
-        if info == "systemd" || info == "" {
-            "N/A (could not determine the terminal, this could be an issue of using tmux)".to_string()
-        } else {
-            info
-        }
+    let process_id = terminal::ppid(File::open(path)?)
+        .trim()
+        .replace("\n", "");
+    let process_name = terminal::name(process_id.clone())
+        .trim()
+        .replace("\n", "");
+    let info = terminal::info(process_name, process_id).unwrap();
+    if info == "systemd" || info == "" {
+        Ok("N/A (could not determine the terminal, this could be an issue of using tmux)".to_string())
     } else {
-        format!("N/A (could not read {})", path)
+        Ok(info)
     }
 }
 
