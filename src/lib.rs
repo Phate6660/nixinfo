@@ -1,6 +1,7 @@
 use glob::glob;
 use std::env;
 use std::fs::{metadata, read_to_string, File};
+use std::io;
 use std::process::Command;
 
 mod cpu;
@@ -12,38 +13,28 @@ use shared_functions::{line, read};
 mod terminal;
 mod uptime;
 
-/// Obtain the temp of the CPU, only tested on rpi, outputs to a string
-pub fn temp() -> String {
-    if metadata("/sys/class/thermal/thermal_zone0/temp").is_ok() {
-        let file = File::open("/sys/class/thermal/thermal_zone0/temp").unwrap();
-        let raw_temp = read(file).unwrap().trim().parse::<i64>().unwrap();
-        format!("{}", raw_temp / 1000)
-    } else {
-        "N/A (could not read /sys/class/thermal/thermal_zone0/temp)".to_string()
-    }
+/// Obtain the temp of the CPU, only tested on rpi, outputs to a Result<String>
+pub fn temp() -> io::Result<String> {
+    Ok(format!("{}", read_to_string("/sys/class/thermal/thermal_zone0/temp")?.trim().parse::<i64>().unwrap() / 1000))
 }
 
-/// Obtain CPU model, outputs to a string
-pub fn cpu() -> String {
-    if metadata("/proc/cpuinfo").is_ok() {
-        let file = File::open("/proc/cpuinfo").unwrap();
-        if metadata("/sys/firmware/devicetree/base/model").is_ok() {
-            if read_to_string("/sys/firmware/devicetree/base/model")
-                .unwrap()
-                .starts_with("Raspberry")
-            {
-                let info = cpu::get(file, 1); // Line 2
-                cpu::format(info).trim().to_string().replace("\n", "")
-            } else {
-                let info = cpu::get(file, 4); // Line 5
-                cpu::format(info).trim().to_string().replace("\n", "")
-            }
+/// Obtain CPU model, outputs to a Result<String>
+pub fn cpu() -> io::Result<String> {
+    let file = File::open("/proc/cpuinfo")?;
+    if metadata("/sys/firmware/devicetree/base/model").is_ok() {
+        if read_to_string("/sys/firmware/devicetree/base/model")
+            .unwrap()
+            .starts_with("Raspberry")
+        {
+            let info = cpu::get(file, 1); // Line 2
+            Ok(cpu::format(info).trim().to_string().replace("\n", ""))
         } else {
             let info = cpu::get(file, 4); // Line 5
-            cpu::format(info).trim().to_string().replace("\n", "")
+            Ok(cpu::format(info).trim().to_string().replace("\n", ""))
         }
     } else {
-        "N/A (could not read /proc/cpuinfo)".to_string()
+        let info = cpu::get(file, 4); // Line 5
+        Ok(cpu::format(info).trim().to_string().replace("\n", ""))
     }
 }
 
@@ -101,41 +92,29 @@ pub fn gpu() -> String {
     }
 }
 
-/// Obtain the hostname, outputs to a string
-pub fn hostname() -> String {
-    if metadata("/etc/hostname").is_ok() {
-        read_to_string("/etc/hostname").unwrap().trim().to_string()
-    } else {
-        "N/A (could not read /etc/hostname)".to_string()
-    }
+/// Obtain the hostname, outputs to a Result<String>
+pub fn hostname() -> io::Result<String> {
+    Ok(read_to_string("/etc/hostname")?.trim().to_string())
 }
 
-/// Obtain the kernel version, outputs to a string
-pub fn kernel() -> String {
-    if metadata("/proc/sys/kernel/osrelease").is_ok() {
-        read_to_string("/proc/sys/kernel/osrelease").unwrap().trim().to_string().replace("\n", "")
-    } else {
-        "N/A (could not obtain kernel version)".to_string()
-    }
+/// Obtain the kernel version, outputs to a Result<String>
+pub fn kernel() -> io::Result<String> {
+    Ok(read_to_string("/proc/sys/kernel/osrelease")?.trim().to_string().replace("\n", ""))
 }
 
-/// Obtain total memory in MBs, outputs to a string
-pub fn memory() -> String {
-    if metadata("/proc/meminfo").is_ok() {
-        let file = File::open("/proc/meminfo").unwrap();
-        let total_line = line(file, 0); // MemTotal should be on the first line
-        let total_vec: Vec<&str> = total_line.split(':').collect();
-        let total = total_vec[1].replace("kB", "");
-        let total = total.trim().parse::<i64>().unwrap() / 1024;
-        total.to_string() + " MB"
-    } else {
-        "N/A (could not read /proc/meminfo)".to_string()
-    }
+/// Obtain total memory in MBs, outputs to a Result<String>
+pub fn memory() -> io::Result<String> {
+    let file = File::open("/proc/meminfo")?;
+    let total_line = line(file, 0); // MemTotal should be on the first line
+    let total_vec: Vec<&str> = total_line.split(':').collect();
+    let total = total_vec[1].replace("kB", "");
+    let total = total.trim().parse::<i64>().unwrap() / 1024;
+    Ok(total.to_string() + " MB")
 }
 
 // Music info
 #[cfg(feature = "music")]
-/// Connects to mpd, and obtains music info in the format "artist - album (date) - title", outputs to a string
+/// Connects to mpd, and obtains music info in the format "artist - album (date) - title", outputs to a String
 pub fn music() -> String {
     let mut c = mpd::Client::connect("127.0.0.1:6600").unwrap();
     let song: mpd::Song = c.currentsong().unwrap().unwrap();
@@ -148,7 +127,7 @@ pub fn music() -> String {
 }
 
 #[cfg(not(feature = "music"))]
-/// If the music feature is enabled, it connects to mpd, and obtains music info in the format "artist - album (date) - title", outputs to a string
+/// If the music feature is enabled, it connects to mpd, and obtains music info in the format "artist - album (date) - title", outputs to a String
 pub fn music() -> String {
     "N/A (music feature must be used to pull in the mpd dependency)".to_string()
 }
@@ -263,15 +242,11 @@ pub fn terminal() -> String {
     }
 }
 
-/// Obtains the current uptime of the system, outputs to a string
-pub fn uptime() -> String {
-    if metadata("/proc/uptime").is_ok() {
-        let raw_uptime = read_to_string("/proc/uptime").unwrap();
-        let uptime_vec: Vec<&str> = raw_uptime.split('.').collect();
-        let uptime = uptime_vec[0].parse::<i64>().unwrap();
-        let (days, hours, minutes) = uptime::duration(uptime);
-        format!("{} {} {}", days, hours, minutes).trim().to_string()
-    } else {
-        "N/A (could not obtain read /proc/uptime)".to_string()
-    }
+/// Obtains the current uptime of the system, outputs to a Result<String>
+pub fn uptime() -> io::Result<String> {
+    let raw_uptime = read_to_string("/proc/uptime")?;
+    let uptime_vec: Vec<&str> = raw_uptime.split('.').collect();
+    let uptime = uptime_vec[0].parse::<i64>().unwrap();
+    let (days, hours, minutes) = uptime::duration(uptime);
+    Ok(format!("{} {} {}", days, hours, minutes).trim().to_string())
 }
