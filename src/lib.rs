@@ -13,9 +13,9 @@ use shared_functions::{line, read};
 mod terminal;
 mod uptime;
 
-/// Obtain the temp of the CPU, only tested on rpi, outputs to a Result<String>
+/// Obtain the temp of the CPU in Celsius, only tested on rpi, outputs to a Result<String>
 pub fn temp() -> io::Result<String> {
-    Ok(format!("{}", read_to_string("/sys/class/thermal/thermal_zone0/temp")?.trim().parse::<i64>().unwrap() / 1000))
+    Ok(format!("{}", read_to_string("/sys/class/thermal/thermal_zone0/temp")?.trim().parse::<f64>().unwrap() / 1000.0))
 }
 
 /// Obtain CPU model, outputs to a Result<String>
