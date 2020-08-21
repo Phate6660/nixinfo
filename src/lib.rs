@@ -26,11 +26,10 @@ pub fn cpu() -> io::Result<String> {
         let info = cpu::get(file, line);
         Ok(cpu::format(info).trim().to_string().replace("\n", ""))
     }
-    if model.is_ok() {
-        if model.unwrap().starts_with("Raspberry") {
-            info(file, 1)
-        } else {
-            info(file, 4)
+    if let Ok(model) = model {
+        match model.starts_with("Raspberry") {
+            true => info(file, 1),
+            false => info(file, 4),
         }
     } else {
         info(file, 4)
