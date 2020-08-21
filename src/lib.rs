@@ -66,7 +66,7 @@ pub fn distro() -> String {
 pub fn environment() -> String {
     let de = environment::de();
     if de == "N/A" {
-        environment::wm()
+        environment::wm().unwrap()
     } else {
         de
     }
@@ -79,16 +79,15 @@ pub fn env(var: &str) -> String {
 }
 
 /// Obtain the name of the GPU, outputs to a string
-pub fn gpu() -> String {
+pub fn gpu() -> io::Result<String> {
     let output = Command::new("sh")
         .args(&["-c", "lspci | grep -I 'VGA\\|Display\\|3D'"])
-        .output()
-        .expect("Could not run `lspci | grep -I 'VGA\\|Display\\|3D'`, are you sure `lspci` and `grep` are installed?");
+        .output()?;
     let model = String::from_utf8_lossy(&output.stdout).split(':').collect::<Vec<&str>>()[2].trim().to_string();
     if model.starts_with("Advanced Micro Devices, Inc.") {
-        model.split('.').collect::<Vec<&str>>()[1].trim().replace("[", "").replace("]", "").replace("\n", "")
+        Ok(model.split('.').collect::<Vec<&str>>()[1].trim().replace("[", "").replace("]", "").replace("\n", ""))
     } else {
-        model.replace("\n", "")
+        Ok(model.replace("\n", ""))
     }
 }
 
@@ -133,56 +132,49 @@ pub fn music() -> String {
 }
 
 /// Obtain list of packages based on what manager is given as an arg, outputs to a string
-pub fn packages(manager: &str) -> String {
+pub fn packages(manager: &str) -> io::Result<String> {
     match manager {
         "apk" => {
             let output = Command::new("apk")
                 .arg("info")
-                .output()
-                .expect("Could not run apk.");
-            format!("{}", packages::count(output))
+                .output()?;
+            Ok(format!("{}", packages::count(output)))
         }
         "apt" => {
             let output = Command::new("apt")
                 .args(&["list", "--installed"])
-                .output()
-                .expect("Could not run apt.");
-            format!("{}", packages::count(output) - 1) // -1 to deal with "Listing..."
+                .output()?;
+            Ok(format!("{}", packages::count(output) - 1)) // -1 to deal with "Listing..."
         }
         "dnf" => {
             let output = Command::new("dnf")
                 .args(&["list", "installed"])
-                .output()
-                .expect("Could not run dnf.");
-            format!("{}", packages::count(output))
+                .output()?;
+            Ok(format!("{}", packages::count(output)))
         }
         "dpkg" => {
             let output = Command::new("dpkg-query")
                 .args(&["-f", "'${binary:Package}\n'", "-W"])
-                .output()
-                .expect("Could not run dpkg-query.");
-            format!("{}", packages::count(output))
+                .output()?;
+            Ok(format!("{}", packages::count(output)))
         }
         "eopkg" => {
             let output = Command::new("eopkg")
                 .arg("list-installed")
-                .output()
-                .expect("Could not run eopkg.");
-            format!("{}", packages::count(output))
+                .output()?;
+            Ok(format!("{}", packages::count(output)))
         }
         "pacman" => {
             let output = Command::new("pacman")
                 .args(&["-Q", "-q"])
-                .output()
-                .expect("Could not run pacman.");
-            format!("{}", packages::count(output))
+                .output()?;
+            Ok(format!("{}", packages::count(output)))
         }
         "pip" => {
             let output = Command::new("pip")
                 .arg("list")
-                .output()
-                .expect("Could not run pip.");
-            format!("{}", packages::count(output) - 2) // -2 to deal with header lines in output
+                .output()?;
+            Ok(format!("{}", packages::count(output) - 2)) // -2 to deal with header lines in output
         }
         "portage" => {
             let content = read(File::open("/var/lib/portage/world").unwrap()).unwrap();
@@ -196,27 +188,25 @@ pub fn packages(manager: &str) -> String {
                 }
             }
 
-            format!(
-                "{} (explicit), {} (total)",
-                file_vector.iter().count() - 1,
-                list.iter().count()
-            )
+            Ok(format!(
+                    "{} (explicit), {} (total)",
+                    file_vector.iter().count() - 1,
+                    list.iter().count()
+                ))
         }
         "rpm" => {
             let output = Command::new("rpm")
                 .args(&["-q", "-a"])
-                .output()
-                .expect("Could not run rpm.");
-            format!("{}", packages::count(output))
+                .output()?;
+            Ok(format!("{}", packages::count(output)))
         }
         "xbps" => {
             let output = Command::new("xbps-query")
                 .arg("list-installed")
-                .output()
-                .expect("Could not run xbps-query.");
-            format!("{}", packages::count(output))
+                .output()?;
+            Ok(format!("{}", packages::count(output)))
         }
-        _ => format!("N/A ({} is not supported, please file a bug to get it added!)", manager),
+        _ => Ok(format!("N/A ({} is not supported, please file a bug to get it added!)", manager)),
     }
 }
 
@@ -242,7 +232,7 @@ pub fn terminal() -> io::Result<String> {
 pub fn uptime() -> io::Result<String> {
     let raw_uptime = read_to_string("/proc/uptime")?;
     let uptime_vec: Vec<&str> = raw_uptime.split('.').collect();
-    let uptime = uptime_vec[0].parse::<i64>().unwrap();
+    let uptime = uptime_vec[0].parse::<f64>().unwrap();
     let (days, hours, minutes) = uptime::duration(uptime);
     Ok(format!("{} {} {}", days, hours, minutes).trim().to_string())
 }

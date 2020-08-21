@@ -7,14 +7,10 @@ pub fn de() -> String {
         .unwrap_or_else(|_| "N/A".to_string())
 }
 
-pub fn wm() -> String {
+pub fn wm() -> std::io::Result<String> {
     let path = format!("{}/.xinitrc", env::var("HOME").unwrap());
-    if std::fs::metadata(&path).is_ok() {
-        let file = std::fs::File::open(&path).unwrap();
-        let contents = crate::shared_functions::read(file).unwrap();
-        let line = contents.lines().last().unwrap();
-        line.split(' ').last().unwrap().to_string()
-    } else {
-        "N/A (could not open $HOME/.xinitrc)".to_string()
-    }
+    let file = std::fs::File::open(&path)?;
+    let contents = crate::shared_functions::read(file).unwrap();
+    let line = contents.lines().last().unwrap();
+    Ok(line.split(' ').last().unwrap().to_string())
 }

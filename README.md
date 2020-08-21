@@ -17,7 +17,7 @@ To use: `nixinfo = "0.1.9"` in your `Cargo.toml`.
 - env variables
   + `nixinfo::env("VARIABLE")` -> `String`
 - GPU info (requires `lspci` and `grep` to be installed for now until I find a pure rust solution)
-  + `nixinfo::gpu()` -> `String`
+  + `nixinfo::gpu()` -> `Result<String>`
 - Hostname
   + `nixinfo::hostname()` -> `Result<String>`
 - Kernel
@@ -27,7 +27,7 @@ To use: `nixinfo = "0.1.9"` in your `Cargo.toml`.
 - Music info (only mpd is supported, requires `music` feature to be enabled)
   + `nixinfo::music()` -> `String`
 - Package counts (managers supported are apk, apt, dnf, dpkg, eopkg, pacman, pip, portage, rpm, and xbps)
-  + `nixinfo::packages("manager")` -> `String`
+  + `nixinfo::packages("manager")` -> `Result<String>`
 - Terminal being used (unless tmux is used, in which case N/A will be outputted because reasons)
   + `nixnfo::terminal()` -> `Result<String>`
 - Uptime of device
