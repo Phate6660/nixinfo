@@ -221,7 +221,7 @@ pub fn terminal() -> io::Result<String> {
 pub fn uptime() -> io::Result<String> {
     let raw_uptime = read_to_string("/proc/uptime")?;
     let uptime_vec: Vec<&str> = raw_uptime.split('.').collect();
-    let uptime = uptime_vec[0].parse::<f64>().unwrap();
+    let uptime = uptime_vec[0].parse::<i64>().unwrap();
     let (days, hours, minutes) = uptime::duration(uptime);
     Ok(format!("{} {} {}", days, hours, minutes).trim().to_string())
 }
