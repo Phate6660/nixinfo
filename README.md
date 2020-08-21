@@ -9,9 +9,9 @@ To use: `nixinfo = "0.1.9"` in your `Cargo.toml`.
   + `nixinfo::cpu()` -> `Result<String>`
   + `nixinfo::temp()` -> `Result<String>`
 - Device name
-  + `nixinfo::device()` -> `String`
+  + `nixinfo::device()` -> `Result<String>`
 - Distro name
-  + `nixinfo::distro()` -> `String`
+  + `nixinfo::distro()` -> `Result<String>`
 - Environment (e.g. DE or WM)
   + `nixinfo::environment()` -> `String`
 - env variables

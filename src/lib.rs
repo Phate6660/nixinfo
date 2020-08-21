@@ -39,27 +39,17 @@ pub fn cpu() -> io::Result<String> {
 }
 
 /// Obtain name of device, outputs to a string
-pub fn device() -> String {
-    if metadata("/sys/devices/virtual/dmi/id/product_name").is_ok() {
-        read_to_string("/sys/devices/virtual/dmi/id/product_name").unwrap().trim().to_string().replace("\n", "")
-    } else if metadata("/sys/firmware/devicetree/base/model").is_ok() {
-        read_to_string("/sys/firmware/devicetree/base/model").unwrap().trim().to_string().replace("\n", "")
-    } else {
-        "N/A (could not obtain name of device)".to_string()
-    }
+pub fn device() -> io::Result<String> {
+    let model = read_to_string("/sys/devices/virtual/dmi/id/product_name").or_else(|_| read_to_string("/sys/firmware/devicetree/base/model"))?;
+    Ok(model.trim().replace("\n", ""))
 }
 
 /// Obtain the distro name, outputs to a string
-pub fn distro() -> String {
-    if metadata("/bedrock/etc/os-release").is_ok() {
-        distro::dist("/bedrock/etc/os-release")
-    } else if metadata("/etc/os-release").is_ok() {
-        distro::dist("/etc/os-release")
-    } else if metadata("/usr/lib/os-release").is_ok() {
-        distro::dist("/usr/lib/os-release")
-    } else {
-        "N/A (could not obtain distro name, please file a bug as your os-release file may just be in a weird place)".to_string()
-    }
+pub fn distro() -> io::Result<String> {
+    let distro = distro::dist("/bedrock/etc/os-release")
+        .or_else(|_| distro::dist("/etc/os-release"))
+        .or_else(|_| distro::dist("/usr/lib/os-release"))?;
+    Ok(distro)
 }
 
 /// Obtains the name of the user's DE or WM, outputs to a string
@@ -74,8 +64,7 @@ pub fn environment() -> String {
 
 /// Obtain the contents of the env variable specified as an arg, outputs to a string
 pub fn env(var: &str) -> String {
-    // $SHELL and $USER are set automatically, the only env variable it would fail on is $EDITOR
-    env::var(var).unwrap_or_else(|_| "N/A (could not read $EDITOR, are you sure it's set?)".to_string())
+    env::var(var).unwrap_or_else(|_| format!("N/A (could not read ${}, are you sure it's set?)", var))
 }
 
 /// Obtain the name of the GPU, outputs to a string
