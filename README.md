@@ -5,7 +5,7 @@ To use: `nixinfo = "0.1.9"` in your `Cargo.toml`.
 
 ## Currently supported
 
-- CPU model and temperature
+- CPU model and temperature (Celsius)
   + `nixinfo::cpu()` -> `Result<String>`
   + `nixinfo::temp()` -> `Result<String>`
 - Device name
