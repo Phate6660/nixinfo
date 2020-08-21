@@ -1,6 +1,6 @@
 use glob::glob;
 use std::env;
-use std::fs::{metadata, read_to_string, File};
+use std::fs::{read_to_string, File};
 use std::io;
 use std::process::Command;
 
@@ -21,20 +21,19 @@ pub fn temp() -> io::Result<String> {
 /// Obtain CPU model, outputs to a Result<String>
 pub fn cpu() -> io::Result<String> {
     let file = File::open("/proc/cpuinfo")?;
-    if metadata("/sys/firmware/devicetree/base/model").is_ok() {
-        if read_to_string("/sys/firmware/devicetree/base/model")
-            .unwrap()
-            .starts_with("Raspberry")
-        {
-            let info = cpu::get(file, 1); // Line 2
-            Ok(cpu::format(info).trim().to_string().replace("\n", ""))
+    let model = read_to_string("/sys/firmware/devicetree/base/model");
+    fn info(file: File, line: usize) -> io::Result<String> {
+        let info = cpu::get(file, line);
+        Ok(cpu::format(info).trim().to_string().replace("\n", ""))
+    }
+    if model.is_ok() {
+        if model.unwrap().starts_with("Raspberry") {
+            info(file, 1)
         } else {
-            let info = cpu::get(file, 4); // Line 5
-            Ok(cpu::format(info).trim().to_string().replace("\n", ""))
+            info(file, 4)
         }
     } else {
-        let info = cpu::get(file, 4); // Line 5
-        Ok(cpu::format(info).trim().to_string().replace("\n", ""))
+        info(file, 4)
     }
 }
 
