@@ -51,18 +51,18 @@ pub fn distro() -> io::Result<String> {
 }
 
 /// Obtains the name of the user's DE or WM, outputs to a string
-pub fn environment() -> String {
-    let de = environment::de();
+pub fn environment() -> io::Result<String> {
+    let de = environment::de().unwrap();
     if de == "N/A" {
-        environment::wm().unwrap()
+        Ok(environment::wm().unwrap())
     } else {
-        de
+        Ok(de)
     }
 }
 
 /// Obtain the contents of the env variable specified as an arg, outputs to a string
-pub fn env(var: &str) -> String {
-    env::var(var).unwrap_or_else(|_| format!("N/A (could not read ${}, are you sure it's set?)", var))
+pub fn env(var: &str) -> Option<String> {
+    Some(env::var(var).unwrap_or_else(|_| format!("N/A (could not read ${}, are you sure it's set?)", var)))
 }
 
 /// Obtain the name of the GPU, outputs to a string

@@ -1,13 +1,13 @@
-use std::env;
+use std::{env, io};
 
-pub fn de() -> String {
-    env::var("XDG_DESKTOP_SESSION")
+pub fn de() -> io::Result<String> {
+    Ok(env::var("XDG_DESKTOP_SESSION")
         .or_else(|_| env::var("XDG_CURRENT_DESKTOP"))
         .or_else(|_| env::var("DESKTOP_SESSION"))
-        .unwrap_or_else(|_| "N/A".to_string())
+        .unwrap_or_else(|_| "N/A".to_string()))
 }
 
-pub fn wm() -> std::io::Result<String> {
+pub fn wm() -> io::Result<String> {
     let path = format!("{}/.xinitrc", env::var("HOME").unwrap());
     let file = std::fs::File::open(&path)?;
     let contents = crate::shared_functions::read(file).unwrap();

@@ -1,7 +1,7 @@
 ## nixinfo
 A lib crate for gathering system info such as cpu, distro, environment, kernel, etc in Rust.
 
-To use: `nixinfo = "0.2.7"` in your `Cargo.toml`.
+To use: `nixinfo = "0.2.8"` in your `Cargo.toml`.
 
 ## Currently supported
 
@@ -13,9 +13,9 @@ To use: `nixinfo = "0.2.7"` in your `Cargo.toml`.
 - Distro name
   + `nixinfo::distro()` -> `Result<String>`
 - Environment (e.g. DE or WM)
-  + `nixinfo::environment()` -> `String`
+  + `nixinfo::environment()` -> `Result<String>`
 - env variables
-  + `nixinfo::env("VARIABLE")` -> `String`
+  + `nixinfo::env("VARIABLE")` -> `Option<String>`
 - GPU info (requires `lspci` and `grep` to be installed for now until I find a pure rust solution)
   + `nixinfo::gpu()` -> `Result<String>`
 - Hostname
