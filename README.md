@@ -36,3 +36,4 @@ To use: `nixinfo = "0.2.8"` in your `Cargo.toml`.
 ## TODO
 
 - Obtain used memory in addition to total memory
+- Support *BSD
