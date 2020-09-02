@@ -151,6 +151,12 @@ pub fn packages(manager: &str) -> io::Result<String> {
                 .output()?;
             Ok(format!("{}", packages::count(output)))
         }
+        "flatpak" => {
+            let output = Command::new("flatpak")
+                .args(&["list"])
+                .output()?;
+            Ok(format!("{}", packages::count(output)))
+        }
         "pacman" => {
             let output = Command::new("pacman")
                 .args(&["-Q", "-q"])
