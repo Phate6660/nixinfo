@@ -103,7 +103,7 @@ pub fn memory() -> io::Result<String> {
 /// Connects to mpd, and obtains music info in the format "artist - album (date) - title", outputs to a String
 pub fn music() -> Result<String, Box<dyn std::error::Error>> {
     let mut c = mpd::Client::connect("127.0.0.1:6600")?;
-    let song: mpd::Song = c.currentsong().unwrap().unwrap();
+    let song: mpd::Song = c.currentsong()?.unwrap();
     let na = "N/A".to_string();
     let tit = song.title.as_ref().unwrap();
     let art = song.tags.get("Artist").unwrap_or(&na);
