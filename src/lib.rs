@@ -103,13 +103,17 @@ pub fn memory() -> io::Result<String> {
 /// Connects to mpd, and obtains music info in the format "artist - album (date) - title", outputs to a String
 pub fn music() -> Result<String, Box<dyn std::error::Error>> {
     let mut c = mpd::Client::connect("127.0.0.1:6600")?;
-    let song: mpd::Song = c.currentsong()?.unwrap();
-    let na = "N/A".to_string();
-    let tit = song.title.as_ref().unwrap();
-    let art = song.tags.get("Artist").unwrap_or(&na);
-    let alb = song.tags.get("Album").unwrap_or(&na);
-    let dat = song.tags.get("Date").unwrap_or(&na);
-    Ok(format!("{} - {} ({}) - {}", art, alb, dat, tit))
+    if assert!(c.currentsong().unwrap().unwrap()) {
+        Ok("N/A (mpd is either not running or stopped)".to_string())
+    } else {
+        let song = c.currentsong().unwrap().unwrap();
+        let na = "N/A".to_string();
+        let tit = song.title.as_ref().unwrap();
+        let art = song.tags.get("Artist").unwrap_or(&na);
+        let alb = song.tags.get("Album").unwrap_or(&na);
+        let dat = song.tags.get("Date").unwrap_or(&na);
+        Ok(format!("{} - {} ({}) - {}", art, alb, dat, tit))
+   }
 }
 
 #[cfg(not(feature = "music"))]
@@ -195,7 +199,7 @@ pub fn packages(manager: &str) -> io::Result<String> {
         }
         "xbps" => {
             let output = Command::new("xbps-query")
-                .arg("list-installed")
+                .arg("-l")
                 .output()?;
             Ok(format!("{}", packages::count(output)))
         }
