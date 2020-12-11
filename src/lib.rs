@@ -1,5 +1,6 @@
 use glob::glob;
 use std::env;
+use std::fs;
 use std::fs::{read_to_string, File};
 use std::io;
 use std::process::Command;
@@ -9,7 +10,7 @@ mod distro;
 mod environment;
 mod packages;
 mod shared_functions;
-use shared_functions::{line, read};
+use shared_functions::read;
 mod terminal;
 mod uptime;
 
@@ -38,7 +39,8 @@ pub fn cpu() -> io::Result<String> {
 
 /// Obtain name of device, outputs to a string
 pub fn device() -> io::Result<String> {
-    let model = read_to_string("/sys/devices/virtual/dmi/id/product_name").or_else(|_| read_to_string("/sys/firmware/devicetree/base/model"))?;
+    let model = read_to_string("/sys/devices/virtual/dmi/id/product_name")
+        .or_else(|_| read_to_string("/sys/firmware/devicetree/base/model"))?;
     Ok(model.trim().replace("\n", ""))
 }
 
@@ -70,9 +72,17 @@ pub fn gpu() -> io::Result<String> {
     let output = Command::new("sh")
         .args(&["-c", "lspci | grep -I 'VGA\\|Display\\|3D'"])
         .output()?;
-    let model = String::from_utf8_lossy(&output.stdout).split(':').collect::<Vec<&str>>()[2].trim().to_string();
+    let model = String::from_utf8_lossy(&output.stdout)
+        .split(':')
+        .collect::<Vec<&str>>()[2]
+        .trim()
+        .to_string();
     if model.starts_with("Advanced Micro Devices, Inc.") {
-        Ok(model.split('.').collect::<Vec<&str>>()[1].trim().replace("[", "").replace("]", "").replace("\n", ""))
+        Ok(model.split('.').collect::<Vec<&str>>()[1]
+            .trim()
+            .replace("[", "")
+            .replace("]", "")
+            .replace("\n", ""))
     } else {
         Ok(model.replace("\n", ""))
     }
@@ -85,17 +95,54 @@ pub fn hostname() -> io::Result<String> {
 
 /// Obtain the kernel version, outputs to a Result<String>
 pub fn kernel() -> io::Result<String> {
-    Ok(read_to_string("/proc/sys/kernel/osrelease")?.trim().to_string().replace("\n", ""))
+    Ok(read_to_string("/proc/sys/kernel/osrelease")?
+        .trim()
+        .to_string()
+        .replace("\n", ""))
 }
 
 /// Obtain total memory in MBs, outputs to a Result<String>
 pub fn memory() -> io::Result<String> {
-    let file = File::open("/proc/meminfo")?;
-    let total_line = line(file, 0); // MemTotal should be on the first line
-    let total_vec: Vec<&str> = total_line.split(':').collect();
-    let total = total_vec[1].replace("kB", "");
-    let total = total.trim().parse::<i64>().unwrap() / 1024;
-    Ok(total.to_string() + " MB")
+    const MEMTOTAL: &str = "MemTotal";
+    const MEMINFO: &str = "/proc/meminfo";
+    const ERROR_01: &str = "no MemTotal line found in /proc/meminfo!";
+    const ERROR_02: &str = "No memoryinfo in MemTotal line!";
+    const UNIT: [&str; 5] = ["kB", "MB", "GB", "TB", "PB"];
+    const SEPARATOR_COLON: &str = ":";
+    const EMPTY_STRING: &str = "";
+
+    const DIVISOR_U64: u64 = 1024;
+    const UNIT_MB: &str = "MB";
+
+    pub trait ToIOResult<T> {
+        fn to_io_result(self) -> io::Result<T>;
+    }
+
+    impl<T, E: ToString> ToIOResult<T> for Result<T, E> {
+        fn to_io_result(self) -> io::Result<T> {
+            match self {
+                Ok(x) => Ok(x),
+                Err(err) => Err(io::Error::new(io::ErrorKind::Other, err.to_string())),
+            }
+        }
+    }
+
+    let meminfo = fs::read_to_string(MEMINFO)?;
+    for line in meminfo.lines() {
+        if line.starts_with(MEMTOTAL) {
+            let mut rsplit = line.rsplit(SEPARATOR_COLON);
+            let size = match rsplit.next() {
+                Some(x) => x
+                    .replace(UNIT[0], EMPTY_STRING)
+                    .trim()
+                    .parse::<u64>()
+                    .to_io_result()?,
+                None => return Err(io::Error::new(io::ErrorKind::Other, ERROR_02)),
+            };
+            return Ok(format!("{} {}", (size / DIVISOR_U64), UNIT_MB));
+        }
+    }
+    Err(io::Error::new(io::ErrorKind::Other, ERROR_01))
 }
 
 // Music info
@@ -103,17 +150,13 @@ pub fn memory() -> io::Result<String> {
 /// Connects to mpd, and obtains music info in the format "artist - album (date) - title", outputs to a String
 pub fn music() -> Result<String, Box<dyn std::error::Error>> {
     let mut c = mpd::Client::connect("127.0.0.1:6600")?;
-    if assert!(c.currentsong().unwrap().unwrap()) {
-        Ok("N/A (mpd is either not running or stopped)".to_string())
-    } else {
-        let song = c.currentsong().unwrap().unwrap();
-        let na = "N/A".to_string();
-        let tit = song.title.as_ref().unwrap();
-        let art = song.tags.get("Artist").unwrap_or(&na);
-        let alb = song.tags.get("Album").unwrap_or(&na);
-        let dat = song.tags.get("Date").unwrap_or(&na);
-        Ok(format!("{} - {} ({}) - {}", art, alb, dat, tit))
-   }
+    let song = c.currentsong().unwrap().unwrap();
+    let na = "N/A".to_string();
+    let tit = song.title.as_ref().unwrap();
+    let art = song.tags.get("Artist").unwrap_or(&na);
+    let alb = song.tags.get("Album").unwrap_or(&na);
+    let dat = song.tags.get("Date").unwrap_or(&na);
+    Ok(format!("{} - {} ({}) - {}", art, alb, dat, tit))
 }
 
 #[cfg(not(feature = "music"))]
@@ -126,9 +169,7 @@ pub fn music() -> String {
 pub fn packages(manager: &str) -> io::Result<String> {
     match manager {
         "apk" => {
-            let output = Command::new("apk")
-                .arg("info")
-                .output()?;
+            let output = Command::new("apk").arg("info").output()?;
             Ok(format!("{}", packages::count(output)))
         }
         "apt" => {
@@ -138,9 +179,7 @@ pub fn packages(manager: &str) -> io::Result<String> {
             Ok(format!("{}", packages::count(output) - 1)) // -1 to deal with "Listing..."
         }
         "dnf" => {
-            let output = Command::new("dnf")
-                .args(&["list", "installed"])
-                .output()?;
+            let output = Command::new("dnf").args(&["list", "installed"]).output()?;
             Ok(format!("{}", packages::count(output)))
         }
         "dpkg" => {
@@ -150,27 +189,19 @@ pub fn packages(manager: &str) -> io::Result<String> {
             Ok(format!("{}", packages::count(output)))
         }
         "eopkg" => {
-            let output = Command::new("eopkg")
-                .arg("list-installed")
-                .output()?;
+            let output = Command::new("eopkg").arg("list-installed").output()?;
             Ok(format!("{}", packages::count(output)))
         }
         "flatpak" => {
-            let output = Command::new("flatpak")
-                .args(&["list"])
-                .output()?;
+            let output = Command::new("flatpak").args(&["list"]).output()?;
             Ok(format!("{}", packages::count(output)))
         }
         "pacman" => {
-            let output = Command::new("pacman")
-                .args(&["-Q", "-q"])
-                .output()?;
+            let output = Command::new("pacman").args(&["-Q", "-q"]).output()?;
             Ok(format!("{}", packages::count(output)))
         }
         "pip" => {
-            let output = Command::new("pip")
-                .arg("list")
-                .output()?;
+            let output = Command::new("pip").arg("list").output()?;
             Ok(format!("{}", packages::count(output) - 2)) // -2 to deal with header lines in output
         }
         "portage" => {
@@ -186,24 +217,23 @@ pub fn packages(manager: &str) -> io::Result<String> {
             }
 
             Ok(format!(
-                    "{} (explicit), {} (total)",
-                    file_vector.iter().count() - 1,
-                    list.iter().count()
-                ))
+                "{} (explicit), {} (total)",
+                file_vector.iter().count() - 1,
+                list.iter().count()
+            ))
         }
         "rpm" => {
-            let output = Command::new("rpm")
-                .args(&["-q", "-a"])
-                .output()?;
+            let output = Command::new("rpm").args(&["-q", "-a"]).output()?;
             Ok(format!("{}", packages::count(output)))
         }
         "xbps" => {
-            let output = Command::new("xbps-query")
-                .arg("-l")
-                .output()?;
+            let output = Command::new("xbps-query").arg("-l").output()?;
             Ok(format!("{}", packages::count(output)))
         }
-        _ => Ok(format!("N/A ({} is not supported, please file a bug to get it added!)", manager)),
+        _ => Ok(format!(
+            "N/A ({} is not supported, please file a bug to get it added!)",
+            manager
+        )),
     }
 }
 
@@ -211,12 +241,8 @@ pub fn packages(manager: &str) -> io::Result<String> {
 pub fn terminal() -> io::Result<String> {
     let id = std::process::id();
     let path = format!("/proc/{}/status", id);
-    let process_id = terminal::ppid(File::open(path)?)
-        .trim()
-        .replace("\n", "");
-    let process_name = terminal::name(process_id.clone())
-        .trim()
-        .replace("\n", "");
+    let process_id = terminal::ppid(File::open(path)?).trim().replace("\n", "");
+    let process_name = terminal::name(process_id.clone()).trim().replace("\n", "");
     let info = terminal::info(process_name, process_id).unwrap();
     if info == "systemd" || info == "" {
         Ok("N/A (could not determine the terminal, this could be an issue of using tmux)".to_string())
