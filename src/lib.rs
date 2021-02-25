@@ -112,7 +112,29 @@ pub fn environment() -> io::Result<String> {
 
 /// Obtain the contents of the env variable specified as an arg, outputs to a string
 pub fn env(var: &str) -> Option<String> {
-    Some(env::var(var).unwrap_or_else(|_| format!("N/A (could not read ${}, are you sure it's set?)", var)))
+    if shared_functions::exit_code() != 1 {
+        if var == "USER" {
+            let output_user = std::process::Command::new("sh")
+                .args(&["-c", "whoami"])
+                .output()
+                .expect("");
+            Some(String::from_utf8_lossy(&output_user.stdout).trim().to_string())
+        } else {
+            Some(
+                env::var(var)
+                .unwrap_or_else(
+                    |_| format!("N/A (could not read ${}, are you sure it's set?)", var)
+                    )
+                )
+        }
+    } else {
+        Some(
+            env::var(var)
+            .unwrap_or_else(
+                |_| format!("N/A (could not read ${}, are you sure it's set?)", var)
+                )
+            )
+    }
 }
 
 fn r#continue(output_check: String) -> io::Result<String> {
