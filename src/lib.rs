@@ -33,23 +33,71 @@ pub fn cpu() -> io::Result<String> {
             false => info(file, 4),
         }
     } else {
-        info(file, 4)
+        if shared_functions::exit_code() != 1 {
+            info(file, 1)
+        } else {
+            info(file, 4)
+        }
     }
 }
 
 /// Obtain name of device, outputs to a string
 pub fn device() -> io::Result<String> {
-    let model = read_to_string("/sys/devices/virtual/dmi/id/product_name")
-        .or_else(|_| read_to_string("/sys/firmware/devicetree/base/model"))?;
-    Ok(model.trim().replace("\n", ""))
+    if shared_functions::exit_code() != 1 {
+        let output_product = std::process::Command::new("sh")
+            .args(&["-c", "getprop ro.product.name"])
+            .output()
+            .expect("");
+        let product = String::from_utf8_lossy(&output_product.stdout).trim().to_string();
+        let output_model = std::process::Command::new("sh")
+            .args(&["-c", "getprop ro.product.model"])
+            .output()
+            .expect("");
+        let model = String::from_utf8_lossy(&output_model.stdout).trim().to_string();
+        let output_device = std::process::Command::new("sh")
+            .args(&["-c", "getprop ro.product.device"])
+            .output()
+            .expect("");
+        let device = String::from_utf8_lossy(&output_device.stdout).trim().to_string();
+        let full = [
+            product, 
+            " ".to_string(), 
+            model, 
+            " (".to_string(), 
+            device, 
+            ")".to_string()
+        ].concat();
+        Ok(full)
+    } else {
+        let model = read_to_string("/sys/devices/virtual/dmi/id/product_name")
+            .or_else(|_| read_to_string("/sys/firmware/devicetree/base/model"))?;
+        Ok(model.trim().replace("\n", ""))
+    }
 }
 
 /// Obtain the distro name, outputs to a string
 pub fn distro() -> io::Result<String> {
-    let distro = distro::dist("/bedrock/etc/os-release")
-        .or_else(|_| distro::dist("/etc/os-release"))
-        .or_else(|_| distro::dist("/usr/lib/os-release"))?;
-    Ok(distro)
+    if shared_functions::exit_code() != 1 {
+        let output_distro = std::process::Command::new("sh")
+            .args(&["-c", "getprop ro.build.version.release"])
+            .output()
+            .expect("");
+        let mut distro = String::from_utf8_lossy(&output_distro.stdout).trim().to_string();
+        distro = ["Android ".to_string(), distro].concat();
+        let output_flavor = std::process::Command::new("sh")
+            .args(&["-c", "getprop ro.build.flavor"])
+            .output()
+            .expect("");
+        let flavor = String::from_utf8_lossy(&output_flavor.stdout).trim().to_string();
+        let full = [distro, " (".to_string(), flavor, ")".to_string()].concat();
+        Ok(full)
+
+    } else {
+        let distro = distro::dist("/bedrock/etc/os-release")
+            .or_else(|_| distro::dist("/etc/os-release"))
+            .or_else(|_| distro::dist("/usr/lib/os-release"))?;
+        Ok(distro)
+    }
 }
 
 /// Obtains the name of the user's DE or WM, outputs to a string
@@ -64,7 +112,29 @@ pub fn environment() -> io::Result<String> {
 
 /// Obtain the contents of the env variable specified as an arg, outputs to a string
 pub fn env(var: &str) -> Option<String> {
-    Some(env::var(var).unwrap_or_else(|_| format!("N/A (could not read ${}, are you sure it's set?)", var)))
+    if shared_functions::exit_code() != 1 {
+        if var == "USER" {
+            let output_user = std::process::Command::new("sh")
+                .args(&["-c", "whoami"])
+                .output()
+                .expect("");
+            Some(String::from_utf8_lossy(&output_user.stdout).trim().to_string())
+        } else {
+            Some(
+                env::var(var)
+                .unwrap_or_else(
+                    |_| format!("N/A (could not read ${}, are you sure it's set?)", var)
+                    )
+                )
+        }
+    } else {
+        Some(
+            env::var(var)
+            .unwrap_or_else(
+                |_| format!("N/A (could not read ${}, are you sure it's set?)", var)
+                )
+            )
+    }
 }
 
 fn r#continue(output_check: String) -> io::Result<String> {
@@ -99,7 +169,15 @@ pub fn gpu() -> io::Result<String> {
 
 /// Obtain the hostname, outputs to a Result<String>
 pub fn hostname() -> io::Result<String> {
-    Ok(read_to_string("/etc/hostname")?.trim().to_string())
+    if shared_functions::exit_code() != 1 {
+        let output_hostname = std::process::Command::new("sh")
+            .args(&["-c", "hostname"])
+            .output()
+            .expect("");
+        Ok(String::from_utf8_lossy(&output_hostname.stdout).trim().to_string())
+    } else {
+        Ok(read_to_string("/etc/hostname")?.trim().to_string())
+    }
 }
 
 /// Obtain the kernel version, outputs to a Result<String>
