@@ -43,9 +43,36 @@ pub fn cpu() -> io::Result<String> {
 
 /// Obtain name of device, outputs to a string
 pub fn device() -> io::Result<String> {
-    let model = read_to_string("/sys/devices/virtual/dmi/id/product_name")
-        .or_else(|_| read_to_string("/sys/firmware/devicetree/base/model"))?;
-    Ok(model.trim().replace("\n", ""))
+    if shared_functions::exit_code() != 1 {
+        let output_product = std::process::Command::new("sh")
+            .args(&["-c", "getprop ro.product.name"])
+            .output()
+            .expect("");
+        let product = String::from_utf8_lossy(&output_product.stdout).trim().to_string();
+        let output_model = std::process::Command::new("sh")
+            .args(&["-c", "getprop ro.product.model"])
+            .output()
+            .expect("");
+        let model = String::from_utf8_lossy(&output_model.stdout).trim().to_string();
+        let output_device = std::process::Command::new("sh")
+            .args(&["-c", "getprop ro.product.device"])
+            .output()
+            .expect("");
+        let device = String::from_utf8_lossy(&output_device.stdout).trim().to_string();
+        let full = [
+            product, 
+            " ".to_string(), 
+            model, 
+            " (".to_string(), 
+            device, 
+            ")".to_string()
+        ].concat();
+        Ok(full)
+    } else {
+        let model = read_to_string("/sys/devices/virtual/dmi/id/product_name")
+            .or_else(|_| read_to_string("/sys/firmware/devicetree/base/model"))?;
+        Ok(model.trim().replace("\n", ""))
+    }
 }
 
 /// Obtain the distro name, outputs to a string
