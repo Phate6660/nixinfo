@@ -46,14 +46,20 @@ pub fn device() -> io::Result<String> {
 
 /// Obtain the distro name, outputs to a string
 pub fn distro() -> io::Result<String> {
-    if distro::exit_code() != 1 {
-        let output = std::process::Command::new("sh")
+    if shared_functions::exit_code() != 1 {
+        let output_distro = std::process::Command::new("sh")
             .args(&["-c", "getprop ro.build.version.release"])
             .output()
             .expect("");
-        let mut distro = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let mut distro = String::from_utf8_lossy(&output_distro.stdout).trim().to_string();
         distro = ["Android ".to_string(), distro].concat();
-        Ok(distro)
+        let output_flavor = std::process::Command::new("sh")
+            .args(&["-c", "getprop ro.build.flavor"])
+            .output()
+            .expect("");
+        let flavor = String::from_utf8_lossy(&output_flavor.stdout).trim().to_string();
+        let full = [distro, " (".to_string(), flavor, ")".to_string()].concat();
+        Ok(full)
 
     } else {
         let distro = distro::dist("/bedrock/etc/os-release")
