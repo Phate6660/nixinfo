@@ -33,7 +33,11 @@ pub fn cpu() -> io::Result<String> {
             false => info(file, 4),
         }
     } else {
-        info(file, 4)
+        if shared_functions::exit_code() != 1 {
+            info(file, 1)
+        } else {
+            info(file, 4)
+        }
     }
 }
 
