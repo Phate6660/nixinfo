@@ -32,12 +32,10 @@ pub fn cpu() -> io::Result<String> {
             true => info(file, 1),
             false => info(file, 4),
         }
+    } else if shared_functions::exit_code() != 1 {
+        info(file, 1)
     } else {
-        if shared_functions::exit_code() != 1 {
-            info(file, 1)
-        } else {
-            info(file, 4)
-        }
+        info(file, 4)
     }
 }
 
@@ -201,11 +199,11 @@ pub fn memory() -> io::Result<String> {
     const DIVISOR_U64: u64 = 1024;
     const UNIT_MB: &str = "MB";
 
-    pub trait ToIOResult<T> {
+    pub trait ToIoResult<T> {
         fn to_io_result(self) -> io::Result<T>;
     }
 
-    impl<T, E: ToString> ToIOResult<T> for Result<T, E> {
+    impl<T, E: ToString> ToIoResult<T> for Result<T, E> {
         fn to_io_result(self) -> io::Result<T> {
             match self {
                 Ok(x) => Ok(x),
@@ -331,7 +329,7 @@ pub fn terminal() -> io::Result<String> {
     let process_id = terminal::ppid(File::open(path)?).trim().replace("\n", "");
     let process_name = terminal::name(process_id.clone()).trim().replace("\n", "");
     let info = terminal::info(process_name, process_id).unwrap();
-    if info == "systemd" || info == "" {
+    if info == "systemd" || info.is_empty() {
         Ok("N/A (could not determine the terminal, this could be an issue of using tmux)".to_string())
     } else {
         Ok(info)
