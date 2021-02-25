@@ -46,10 +46,21 @@ pub fn device() -> io::Result<String> {
 
 /// Obtain the distro name, outputs to a string
 pub fn distro() -> io::Result<String> {
-    let distro = distro::dist("/bedrock/etc/os-release")
-        .or_else(|_| distro::dist("/etc/os-release"))
-        .or_else(|_| distro::dist("/usr/lib/os-release"))?;
-    Ok(distro)
+    if distro::exit_code() != 1 {
+        let output = std::process::Command::new("sh")
+            .args(&["-c", "getprop ro.build.version.release"])
+            .output()
+            .expect("");
+        let mut distro = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        distro = ["Android ".to_string(), distro].concat();
+        Ok(distro)
+
+    } else {
+        let distro = distro::dist("/bedrock/etc/os-release")
+            .or_else(|_| distro::dist("/etc/os-release"))
+            .or_else(|_| distro::dist("/usr/lib/os-release"))?;
+        Ok(distro)
+    }
 }
 
 /// Obtains the name of the user's DE or WM, outputs to a string
