@@ -169,7 +169,15 @@ pub fn gpu() -> io::Result<String> {
 
 /// Obtain the hostname, outputs to a Result<String>
 pub fn hostname() -> io::Result<String> {
-    Ok(read_to_string("/etc/hostname")?.trim().to_string())
+    if shared_functions::exit_code() != 1 {
+        let output_hostname = std::process::Command::new("sh")
+            .args(&["-c", "hostname"])
+            .output()
+            .expect("");
+        Ok(String::from_utf8_lossy(&output_hostname.stdout).trim().to_string())
+    } else {
+        Ok(read_to_string("/etc/hostname")?.trim().to_string())
+    }
 }
 
 /// Obtain the kernel version, outputs to a Result<String>
