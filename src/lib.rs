@@ -21,17 +21,13 @@ pub fn temp() -> io::Result<String> {
 /// Obtain CPU model, outputs to a Result<String>
 pub fn cpu() -> io::Result<String> {
     let file = File::open("/proc/cpuinfo")?;
-    let model = read_to_string("/sys/firmware/devicetree/base/model");
+    
     fn info(file: File, line: usize) -> io::Result<String> {
         let info = cpu::get(file, line);
         Ok(cpu::format(info).trim().to_string().replace("\n", ""))
     }
-    if let Ok(model) = model {
-        match model.starts_with("Raspberry") {
-            true => info(file, 1),
-            false => info(file, 4),
-        }
-    } else if shared_functions::exit_code("getprop") != 1 {
+    
+    if shared_functions::exit_code("getprop") != 1 {
         info(file, 1)
     } else {
         info(file, 4)
@@ -56,14 +52,7 @@ pub fn device() -> io::Result<String> {
             .output()
             .expect("");
         let device = String::from_utf8_lossy(&output_device.stdout).trim().to_string();
-        let full = [
-            product, 
-            " ".to_string(), 
-            model, 
-            " (".to_string(), 
-            device, 
-            ")".to_string()
-        ].concat();
+        let full = [product, " ".to_string(), model, " (".to_string(), device, ")".to_string()].concat();
         Ok(full)
     } else {
         let model = read_to_string("/sys/devices/virtual/dmi/id/product_name")
@@ -179,10 +168,19 @@ pub fn hostname() -> io::Result<String> {
 
 /// Obtain the kernel version, outputs to a Result<String>
 pub fn kernel() -> io::Result<String> {
-    Ok(read_to_string("/proc/sys/kernel/osrelease")?
-        .trim()
-        .to_string()
-        .replace("\n", ""))
+    let kernel_string = read_to_string("/proc/sys/kernel/osrelease");
+    if kernel_string.is_ok() {
+        Ok(kernel_string.unwrap()
+           .trim()
+           .to_string()
+           .replace("\n", ""))
+    } else {
+        let output_kernel = std::process::Command::new("sh")
+            .args(&["-c", "uname -r"])
+            .output()
+            .expect("");
+        Ok(String::from_utf8_lossy(&output_kernel.stdout).trim().to_string())
+    }
 }
 
 /// Obtain total memory in MBs, outputs to a Result<String>
@@ -196,7 +194,7 @@ pub fn memory() -> io::Result<String> {
         let total_vec: Vec<&str> = total_line.split(':').collect();
         let total = total_vec[1].replace("kB", "");
         let total = total.trim().parse::<i64>().unwrap() / 1024;
-        Ok(total.to_string() + " MB")
+        Ok(total.to_string() + UNIT_MB)
     } else {
         let cmd = format!("sysctl hw.physmem | awk -F  '{{ print $2 }}'");
         let output_memory = std::process::Command::new("sh")
