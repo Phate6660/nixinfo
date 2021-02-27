@@ -1,6 +1,5 @@
 use glob::glob;
 use std::env;
-use std::fs;
 use std::fs::{read_to_string, File};
 use std::io;
 use std::process::Command;
@@ -192,7 +191,14 @@ pub fn memory() -> io::Result<String> {
     const UNIT_MB: &str = "MB";
     
     if shared_functions::exit_code("sysctl") != 1 {
-        let cmd = format!("sysctl hw.physmem | awk -F  '{{print $2}}'");
+        let file = File::open("/proc/meminfo")?;
+        let total_line = shared_functions::line(file, 0); // MemTotal should be on the first line
+        let total_vec: Vec<&str> = total_line.split(':').collect();
+        let total = total_vec[1].replace("kB", "");
+        let total = total.trim().parse::<i64>().unwrap() / 1024;
+        Ok(total.to_string() + " MB")
+    } else {
+        let cmd = format!("sysctl hw.physmem | awk -F  '{{ print $2 }}'");
         let output_memory = std::process::Command::new("sh")
             .args(&["-c", cmd.as_str()])
             .output()
@@ -201,48 +207,6 @@ pub fn memory() -> io::Result<String> {
         let size = memory.parse::<u64>().unwrap();
         let out = format!("{} {}", (size / DIVISOR_U64), UNIT_MB);
         Ok(out)
-    } else {
-        const MEMTOTAL: &str = "MemTotal";
-        const MEMINFO: &str = "/proc/meminfo";
-        const ERROR_01: &str = "no MemTotal line found in /proc/meminfo!";
-        const ERROR_02: &str = "No memoryinfo in MemTotal line!";
-        const UNIT: [&str; 5] = ["kB", "MB", "GB", "TB", "PB"];
-        const SEPARATOR_COLON: &str = ":";
-        const EMPTY_STRING: &str = "";
-
-
-        pub trait ToIoResult<T> {
-            fn to_io_result(self) -> io::Result<T>;
-        }
-
-        impl<T, E: ToString> ToIoResult<T> for Result<T, E> {
-            fn to_io_result(self) -> io::Result<T> {
-                match self {
-                    Ok(x) => Ok(x),
-                    Err(err) => Err(io::Error::new(io::ErrorKind::Other, err.to_string())),
-                }
-            }
-        }
-
-        let meminfo = fs::read_to_string(MEMINFO)?;
-        for line in meminfo.lines() {
-            if line.starts_with(MEMTOTAL) {
-                let mut rsplit = line.rsplit(SEPARATOR_COLON);
-                let size = match rsplit.next() {
-                    Some(x) => x
-                        .replace(UNIT[0], EMPTY_STRING)
-                        .trim()
-                        .parse::<u64>()
-                        .to_io_result()?,
-                    None => return Err(io::Error::new(io::ErrorKind::Other, ERROR_02)),
-                };
-                let out = format!("{} {}", (size / DIVISOR_U64), UNIT_MB);
-                Ok(out)
-            } else {
-                let error = io::Error::new(io::ErrorKind::Other, ERROR_01);
-                Err(error)
-            }
-        }
     }
 }
 
