@@ -32,7 +32,7 @@ pub fn cpu() -> io::Result<String> {
             true => info(file, 1),
             false => info(file, 4),
         }
-    } else if shared_functions::exit_code() != 1 {
+    } else if shared_functions::exit_code("getprop") != 1 {
         info(file, 1)
     } else {
         info(file, 4)
@@ -41,7 +41,7 @@ pub fn cpu() -> io::Result<String> {
 
 /// Obtain name of device, outputs to a string
 pub fn device() -> io::Result<String> {
-    if shared_functions::exit_code() != 1 {
+    if shared_functions::exit_code("getprop") != 1 {
         let output_product = std::process::Command::new("sh")
             .args(&["-c", "getprop ro.product.name"])
             .output()
@@ -75,7 +75,7 @@ pub fn device() -> io::Result<String> {
 
 /// Obtain the distro name, outputs to a string
 pub fn distro() -> io::Result<String> {
-    if shared_functions::exit_code() != 1 {
+    if shared_functions::exit_code("getprop") != 1 {
         let output_distro = std::process::Command::new("sh")
             .args(&["-c", "getprop ro.build.version.release"])
             .output()
@@ -110,7 +110,7 @@ pub fn environment() -> io::Result<String> {
 
 /// Obtain the contents of the env variable specified as an arg, outputs to a string
 pub fn env(var: &str) -> Option<String> {
-    if shared_functions::exit_code() != 1 {
+    if shared_functions::exit_code("getprop") != 1 {
         if var == "USER" {
             let output_user = std::process::Command::new("sh")
                 .args(&["-c", "whoami"])
@@ -167,7 +167,7 @@ pub fn gpu() -> io::Result<String> {
 
 /// Obtain the hostname, outputs to a Result<String>
 pub fn hostname() -> io::Result<String> {
-    if shared_functions::exit_code() != 1 {
+    if shared_functions::exit_code("getprop") != 1 {
         let output_hostname = std::process::Command::new("sh")
             .args(&["-c", "hostname"])
             .output()
@@ -188,46 +188,62 @@ pub fn kernel() -> io::Result<String> {
 
 /// Obtain total memory in MBs, outputs to a Result<String>
 pub fn memory() -> io::Result<String> {
-    const MEMTOTAL: &str = "MemTotal";
-    const MEMINFO: &str = "/proc/meminfo";
-    const ERROR_01: &str = "no MemTotal line found in /proc/meminfo!";
-    const ERROR_02: &str = "No memoryinfo in MemTotal line!";
-    const UNIT: [&str; 5] = ["kB", "MB", "GB", "TB", "PB"];
-    const SEPARATOR_COLON: &str = ":";
-    const EMPTY_STRING: &str = "";
-
     const DIVISOR_U64: u64 = 1024;
     const UNIT_MB: &str = "MB";
+    
+    if shared_functions::exit_code("sysctl") != 1 {
+        let cmd = format!("sysctl hw.physmem | awk -F  '{{print $2}}'");
+        let output_memory = std::process::Command::new("sh")
+            .args(&["-c", cmd.as_str()])
+            .output()
+            .expect("");
+        let memory = String::from_utf8_lossy(&output_memory.stdout).trim().to_string();
+        let size = memory.parse::<u64>().unwrap();
+        let out = format!("{} {}", (size / DIVISOR_U64), UNIT_MB);
+        Ok(out)
+    } else {
+        const MEMTOTAL: &str = "MemTotal";
+        const MEMINFO: &str = "/proc/meminfo";
+        const ERROR_01: &str = "no MemTotal line found in /proc/meminfo!";
+        const ERROR_02: &str = "No memoryinfo in MemTotal line!";
+        const UNIT: [&str; 5] = ["kB", "MB", "GB", "TB", "PB"];
+        const SEPARATOR_COLON: &str = ":";
+        const EMPTY_STRING: &str = "";
 
-    pub trait ToIoResult<T> {
-        fn to_io_result(self) -> io::Result<T>;
-    }
 
-    impl<T, E: ToString> ToIoResult<T> for Result<T, E> {
-        fn to_io_result(self) -> io::Result<T> {
-            match self {
-                Ok(x) => Ok(x),
-                Err(err) => Err(io::Error::new(io::ErrorKind::Other, err.to_string())),
+        pub trait ToIoResult<T> {
+            fn to_io_result(self) -> io::Result<T>;
+        }
+
+        impl<T, E: ToString> ToIoResult<T> for Result<T, E> {
+            fn to_io_result(self) -> io::Result<T> {
+                match self {
+                    Ok(x) => Ok(x),
+                    Err(err) => Err(io::Error::new(io::ErrorKind::Other, err.to_string())),
+                }
+            }
+        }
+
+        let meminfo = fs::read_to_string(MEMINFO)?;
+        for line in meminfo.lines() {
+            if line.starts_with(MEMTOTAL) {
+                let mut rsplit = line.rsplit(SEPARATOR_COLON);
+                let size = match rsplit.next() {
+                    Some(x) => x
+                        .replace(UNIT[0], EMPTY_STRING)
+                        .trim()
+                        .parse::<u64>()
+                        .to_io_result()?,
+                    None => return Err(io::Error::new(io::ErrorKind::Other, ERROR_02)),
+                };
+                let out = format!("{} {}", (size / DIVISOR_U64), UNIT_MB);
+                Ok(out)
+            } else {
+                let error = io::Error::new(io::ErrorKind::Other, ERROR_01);
+                Err(error)
             }
         }
     }
-
-    let meminfo = fs::read_to_string(MEMINFO)?;
-    for line in meminfo.lines() {
-        if line.starts_with(MEMTOTAL) {
-            let mut rsplit = line.rsplit(SEPARATOR_COLON);
-            let size = match rsplit.next() {
-                Some(x) => x
-                    .replace(UNIT[0], EMPTY_STRING)
-                    .trim()
-                    .parse::<u64>()
-                    .to_io_result()?,
-                None => return Err(io::Error::new(io::ErrorKind::Other, ERROR_02)),
-            };
-            return Ok(format!("{} {}", (size / DIVISOR_U64), UNIT_MB));
-        }
-    }
-    Err(io::Error::new(io::ErrorKind::Other, ERROR_01))
 }
 
 // Music info
