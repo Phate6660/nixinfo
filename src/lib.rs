@@ -257,20 +257,12 @@ pub fn packages(manager: &str) -> io::Result<String> {
             let output = Command::new("apk").arg("info").output()?;
             Ok(format!("{}", packages::count(output)))
         }
-        "apt" => {
-            let output = Command::new("apt")
-                .args(&["list", "--installed"])
-                .output()?;
-            Ok(format!("{}", packages::count(output) - 1)) // -1 to deal with "Listing..."
+        "apt" | "dpkg" => {
+            let output = Command::new("dpkg").args(&["--get-selections"]).output()?;
+            Ok(format!("{}", packages::count(output)))
         }
         "dnf" => {
             let output = Command::new("dnf").args(&["list", "installed"]).output()?;
-            Ok(format!("{}", packages::count(output)))
-        }
-        "dpkg" => {
-            let output = Command::new("dpkg-query")
-                .args(&["-f", "'${binary:Package}\n'", "-W"])
-                .output()?;
             Ok(format!("{}", packages::count(output)))
         }
         "eopkg" => {
