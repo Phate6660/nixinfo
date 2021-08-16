@@ -258,9 +258,7 @@ pub fn packages(manager: &str) -> io::Result<String> {
             Ok(format!("{}", packages::count(output)))
         }
         "apt" => {
-            let output = Command::new("apt")
-                .args(&["list", "--installed"])
-                .output()?;
+            let output = Command::new("dpkg").args(&["--get-selections"]).output()?;
             Ok(format!("{}", packages::count(output) - 1)) // -1 to deal with "Listing..."
         }
         "dnf" => {
