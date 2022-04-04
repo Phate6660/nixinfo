@@ -10,7 +10,8 @@ license = "Unlicense"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-music = ["mpd"]
+music_mpd = ["mpd"]
+music_playerctl = []
 
 [dependencies]
 glob = "0.3.0"

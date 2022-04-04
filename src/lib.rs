@@ -231,8 +231,8 @@ pub fn memory() -> io::Result<String> {
 }
 
 // Music info
-#[cfg(feature = "music")]
 /// Connects to mpd, and obtains music info in the format "artist - album (date) - title", outputs to a String
+#[cfg(feature = "music_mpd")]
 pub fn music() -> Result<String, Box<dyn std::error::Error>> {
     let mut c = mpd::Client::connect("127.0.0.1:6600")?;
     let song = c.currentsong().unwrap().unwrap();
@@ -244,8 +244,24 @@ pub fn music() -> Result<String, Box<dyn std::error::Error>> {
     Ok(format!("{} - {} ({}) - {}", art, alb, dat, tit))
 }
 
-#[cfg(not(feature = "music"))]
-/// If the music feature is enabled, it connects to mpd, and obtains music info in the format "artist - album (date) - title", outputs to a String
+#[cfg(feature = "music_playerctl")]
+/// Gets music info from `playerctl` in the format "artist - album - title", outputs to a String
+pub fn music() -> Result<String, Box<dyn std::error::Error>> {
+    let child = std::process::Command::new("playerctl")
+        .args(&["metadata", "-f", "{{artist}} - {{album}} - {{title}}"])
+        .output();
+    let output;
+    if child.is_ok() {
+        output = String::from_utf8_lossy(&child.unwrap().stdout).to_string();
+    } else {
+        output = String::from("N/A (failed to collect output from `playerctl`)");
+    }
+    Ok(output)
+}
+
+/// If neither `music_mpd` nor `music_playerctl` is used.
+#[cfg(not(feature = "music_mpd"))]
+#[cfg(not(feature = "music_playerctl"))]
 pub fn music() -> String {
     "N/A (music feature must be used to pull in the mpd dependency)".to_string()
 }
