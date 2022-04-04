@@ -26,9 +26,9 @@ To use: `nixinfo = "0.2.8"` in your `Cargo.toml`.
   + `nixinfo::memory()` -> `Result<String>`
 - Music info
   + Features for this:
-    \* `music_mpd` for music info from mpd
-    \* `music_playerctl` for music info from an MPRIS supporting program via `playerctl`
-    \* Enable neither of the features to get an N/A message
+    * `music_mpd` for music info from mpd
+    * `music_playerctl` for music info from an MPRIS supporting program via `playerctl`
+    * Enable neither of the features to get an N/A message
   + `nixinfo::music()` -> `String`
 - Package counts (managers supported are apk, apt, dnf, dpkg, eopkg, pacman, pip, portage, rpm, and xbps)
   + `nixinfo::packages("manager")` -> `Result<String>`
