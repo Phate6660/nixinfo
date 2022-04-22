@@ -1,29 +1,32 @@
-use glob::glob;
 use std::env;
-use std::fs;
-use std::fs::{read_to_string, File};
+use std::fs::{self, read_to_string, File};
 use std::io;
 use std::process::Command;
+
+use glob::glob;
+use shared_functions::read;
+
+use self::error::Error;
 
 mod cpu;
 mod distro;
 mod environment;
+mod error;
 mod packages;
 mod shared_functions;
-use shared_functions::read;
 mod terminal;
 mod uptime;
 
 /// Obtain the temp of the CPU in Celsius, only tested on rpi, outputs to a Result<String>
-pub fn temp() -> io::Result<String> {
+pub fn temp() -> Result<String, Error> {
     Ok(format!("{}", read_to_string("/sys/class/thermal/thermal_zone0/temp")?.trim().parse::<f64>().unwrap() / 1000.0))
 }
 
 /// Obtain CPU model, outputs to a Result<String>
-pub fn cpu() -> io::Result<String> {
+pub fn cpu() -> Result<String, Error> {
     let file = File::open("/proc/cpuinfo")?;
     let model = read_to_string("/sys/firmware/devicetree/base/model");
-    fn info(file: File, line: usize) -> io::Result<String> {
+    fn info(file: File, line: usize) -> Result<String, Error> {
         let info = cpu::get(file, line);
         Ok(cpu::format(info).trim().to_string().replace("\n", ""))
     }
@@ -40,7 +43,7 @@ pub fn cpu() -> io::Result<String> {
 }
 
 /// Obtain name of device, outputs to a string
-pub fn device() -> io::Result<String> {
+pub fn device() -> Result<String, Error> {
     if shared_functions::exit_code() != 1 {
         let output_product = std::process::Command::new("sh")
             .args(&["-c", "getprop ro.product.name"])
@@ -74,7 +77,7 @@ pub fn device() -> io::Result<String> {
 }
 
 /// Obtain the distro name, outputs to a string
-pub fn distro() -> io::Result<String> {
+pub fn distro() -> Result<String, Error> {
     if shared_functions::exit_code() != 1 {
         let output_distro = std::process::Command::new("sh")
             .args(&["-c", "getprop ro.build.version.release"])
@@ -99,7 +102,7 @@ pub fn distro() -> io::Result<String> {
 }
 
 /// Obtains the name of the user's DE or WM, outputs to a string
-pub fn environment() -> io::Result<String> {
+pub fn environment() -> Result<String, Error> {
     let de = environment::de().unwrap();
     if de == "N/A" {
         Ok(environment::wm().unwrap())
@@ -135,7 +138,7 @@ pub fn env(var: &str) -> Option<String> {
     }
 }
 
-fn r#continue(output_check: String) -> io::Result<String> {
+fn r#continue(output_check: String) -> Result<String, Error> {
     let model = output_check
         .split(':')
         .collect::<Vec<&str>>()[2]
@@ -153,7 +156,7 @@ fn r#continue(output_check: String) -> io::Result<String> {
 }
 
 /// Obtain the name of the GPU, outputs to a string
-pub fn gpu() -> io::Result<String> {
+pub fn gpu() -> Result<String, Error> {
     let output = Command::new("sh")
         .args(&["-c", "lspci | grep -I 'VGA\\|Display\\|3D'"])
         .output()?;
@@ -166,7 +169,7 @@ pub fn gpu() -> io::Result<String> {
 }
 
 /// Obtain the hostname, outputs to a Result<String>
-pub fn hostname() -> io::Result<String> {
+pub fn hostname() -> Result<String, Error> {
     if shared_functions::exit_code() != 1 {
         let output_hostname = std::process::Command::new("sh")
             .args(&["-c", "hostname"])
@@ -179,7 +182,7 @@ pub fn hostname() -> io::Result<String> {
 }
 
 /// Obtain the kernel version, outputs to a Result<String>
-pub fn kernel() -> io::Result<String> {
+pub fn kernel() -> Result<String, Error> {
     Ok(read_to_string("/proc/sys/kernel/osrelease")?
         .trim()
         .to_string()
@@ -187,7 +190,7 @@ pub fn kernel() -> io::Result<String> {
 }
 
 /// Obtain total memory in MBs, outputs to a Result<String>
-pub fn memory() -> io::Result<String> {
+pub fn memory() -> Result<String, Error> {
     const MEMTOTAL: &str = "MemTotal";
     const MEMINFO: &str = "/proc/meminfo";
     const ERROR_01: &str = "no MemTotal line found in /proc/meminfo!";
@@ -222,12 +225,12 @@ pub fn memory() -> io::Result<String> {
                     .trim()
                     .parse::<u64>()
                     .to_io_result()?,
-                None => return Err(io::Error::new(io::ErrorKind::Other, ERROR_02)),
+                None => Err(io::Error::new(io::ErrorKind::Other, ERROR_02))?,
             };
             return Ok(format!("{} {}", (size / DIVISOR_U64), UNIT_MB));
         }
     }
-    Err(io::Error::new(io::ErrorKind::Other, ERROR_01))
+    Err(io::Error::new(io::ErrorKind::Other, ERROR_01))?
 }
 
 // Music info
@@ -267,7 +270,7 @@ pub fn music() -> String {
 }
 
 /// Obtain list of packages based on what manager is given as an arg, outputs to a string
-pub fn packages(manager: &str) -> io::Result<String> {
+pub fn packages(manager: &str) -> Result<String, Error> {
     match manager {
         "apk" => {
             let output = Command::new("apk").arg("info").output()?;
@@ -331,7 +334,7 @@ pub fn packages(manager: &str) -> io::Result<String> {
 }
 
 /// Obtain the name of the terminal being used, outputs to a Result<String>
-pub fn terminal() -> io::Result<String> {
+pub fn terminal() -> Result<String, Error> {
     let id = std::process::id();
     let path = format!("/proc/{}/status", id);
     let process_id = terminal::ppid(File::open(path)?).trim().replace("\n", "");
@@ -345,7 +348,7 @@ pub fn terminal() -> io::Result<String> {
 }
 
 /// Obtains the current uptime of the system, outputs to a Result<String>
-pub fn uptime() -> io::Result<String> {
+pub fn uptime() -> Result<String, Error> {
     let raw_uptime = read_to_string("/proc/uptime")?;
     let uptime_vec: Vec<&str> = raw_uptime.split('.').collect();
     let uptime = uptime_vec[0].parse::<i64>().unwrap();
