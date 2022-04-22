@@ -1,7 +1,7 @@
 ## nixinfo
 A lib crate for gathering system info such as cpu, distro, environment, kernel, etc in Rust.
 
-To use: `nixinfo = "0.2.8"` in your `Cargo.toml`.
+To use: `nixinfo = "0.3.2"` in your `Cargo.toml`.
 
 ## Currently supported
 
