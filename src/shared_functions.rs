@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::io::{BufReader, Read};
 
+use crate::error::Error;
+
 /// Returns the exit code of `which getprop > /dev/null 2>&1"`
 pub fn exit_code() -> i32 {
     let status = std::process::Command::new("sh")
@@ -10,7 +12,7 @@ pub fn exit_code() -> i32 {
     status.code().unwrap()
 }
 
-pub fn read(file: File) -> Result<String, Box<dyn std::error::Error>> {
+pub fn read(file: File) -> Result<String, Error> {
     let mut buf_reader = BufReader::new(file);
     let mut contents = String::new();
     buf_reader.read_to_string(&mut contents)?;

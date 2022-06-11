@@ -1,5 +1,6 @@
 use std::fs::File;
-use crate::shared_functions::line;
+
+use crate::{error::Error, shared_functions::line};
 
 pub fn ppid(file: File) -> String {
     let ppid = line(file, 6);
@@ -13,7 +14,7 @@ pub fn name(ppid: String) -> String {
     line.split(':').collect::<Vec<&str>>()[1].to_string()
 }
 
-pub fn info(process_name: String, process_id: String) -> std::io::Result<String> {
+pub fn info(process_name: String, process_id: String) -> Result<String, Error> {
     if process_name.ends_with("sh")
         || process_name == "ion"
         || process_name == "screen"
