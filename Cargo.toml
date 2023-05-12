@@ -2,7 +2,7 @@
 name = "nixinfo"
 description = "A lib crate for gathering system info such as cpu, distro, environment, kernel, etc in Rust."
 homepage = "https://github.com/Phate6660/nixinfo"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Ash <valleyknight@protonmail.com>"]
 edition = "2018"
 license = "Unlicense"

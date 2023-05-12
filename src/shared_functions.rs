@@ -1,5 +1,6 @@
 use std::fs::File;
-use std::io::{BufReader, Error, Read};
+use std::io::Error;
+use std::io::{BufReader, Read};
 
 /// Returns the exit code of `which getprop > /dev/null 2>&1"`
 pub fn exit_code() -> i32 {
