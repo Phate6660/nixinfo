@@ -1,6 +1,4 @@
 ## nixinfo
-**This library seems to broken on 2021 Edition of Rust. I am working on fixing it, but any help would be appreciated as well. :)**
-
 A lib crate for gathering system info such as cpu, distro, environment, kernel, etc in Rust.
 
 To use: `nixinfo = "0.3.2"` in your `Cargo.toml`.

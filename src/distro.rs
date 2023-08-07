@@ -1,4 +1,4 @@
-use crate::error::Error;
+use std::io::Error;
 
 pub fn dist(path: &str) -> Result<String, Error> {
     let file = std::fs::File::open(path)?;

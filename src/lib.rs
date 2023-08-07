@@ -1,17 +1,14 @@
 use std::env;
 use std::fs::{self, read_to_string, File};
-use std::io;
+use std::io::{self, Error};
 use std::process::Command;
 
 use glob::glob;
 use shared_functions::read;
 
-use self::error::Error;
-
 mod cpu;
 mod distro;
 mod environment;
-mod error;
 mod packages;
 mod shared_functions;
 mod terminal;

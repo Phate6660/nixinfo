@@ -1,6 +1,5 @@
 use std::env;
-
-use crate::error::Error;
+use std::io::Error;
 
 pub fn de() -> Result<String, Error> {
     Ok(env::var("XDG_DESKTOP_SESSION")

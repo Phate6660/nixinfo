@@ -1,7 +1,5 @@
 use std::fs::File;
-use std::io::{BufReader, Read};
-
-use crate::error::Error;
+use std::io::{BufReader, Error, Read};
 
 /// Returns the exit code of `which getprop > /dev/null 2>&1"`
 pub fn exit_code() -> i32 {

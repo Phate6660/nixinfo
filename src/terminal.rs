@@ -1,6 +1,6 @@
 use std::fs::File;
-
-use crate::{error::Error, shared_functions::line};
+use std::io::Error;
+use crate::shared_functions::line;
 
 pub fn ppid(file: File) -> String {
     let ppid = line(file, 6);
