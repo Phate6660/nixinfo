@@ -23,7 +23,13 @@ To use: `nixinfo = "0.3.2"` in your `Cargo.toml`.
 - Kernel
   + `nixinfo::kernel()` -> `Result<String>`
 - Total memory in MBs
-  + `nixinfo::memory()` -> `Result<String>`
+  + `nixinfo::memory_total()` -> `Result<String>`
+- Free memory in MBs
+  + `nixinfo::memory_free()` -> `Result<String>`
+- Available memory in MBs
++ `nixinfo::memory_available()` -> `Result<String>`
+- Used memory in MBs
++ `nixinfo::memory_used()` -> `Result<String>`
 - Music info
   + Features for this:
     * `music_mpd` for music info from mpd
