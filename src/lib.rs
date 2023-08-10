@@ -16,7 +16,14 @@ mod uptime;
 
 /// Obtain the temp of the CPU in Celsius, only tested on rpi, outputs to a Result<String>
 pub fn temp() -> Result<String, Error> {
-    Ok(format!("{}", read_to_string("/sys/class/thermal/thermal_zone0/temp")?.trim().parse::<f64>().unwrap() / 1000.0))
+    Ok(format!(
+        "{}",
+        read_to_string("/sys/class/thermal/thermal_zone0/temp")?
+            .trim()
+            .parse::<f64>()
+            .unwrap()
+            / 1000.0
+    ))
 }
 
 /// Obtain CPU model, outputs to a Result<String>
@@ -46,25 +53,32 @@ pub fn device() -> Result<String, Error> {
             .args(&["-c", "getprop ro.product.name"])
             .output()
             .expect("");
-        let product = String::from_utf8_lossy(&output_product.stdout).trim().to_string();
+        let product = String::from_utf8_lossy(&output_product.stdout)
+            .trim()
+            .to_string();
         let output_model = std::process::Command::new("sh")
             .args(&["-c", "getprop ro.product.model"])
             .output()
             .expect("");
-        let model = String::from_utf8_lossy(&output_model.stdout).trim().to_string();
+        let model = String::from_utf8_lossy(&output_model.stdout)
+            .trim()
+            .to_string();
         let output_device = std::process::Command::new("sh")
             .args(&["-c", "getprop ro.product.device"])
             .output()
             .expect("");
-        let device = String::from_utf8_lossy(&output_device.stdout).trim().to_string();
+        let device = String::from_utf8_lossy(&output_device.stdout)
+            .trim()
+            .to_string();
         let full = [
-            product, 
-            " ".to_string(), 
-            model, 
-            " (".to_string(), 
-            device, 
-            ")".to_string()
-        ].concat();
+            product,
+            " ".to_string(),
+            model,
+            " (".to_string(),
+            device,
+            ")".to_string(),
+        ]
+        .concat();
         Ok(full)
     } else {
         let model = read_to_string("/sys/devices/virtual/dmi/id/product_name")
@@ -80,16 +94,19 @@ pub fn distro() -> Result<String, Error> {
             .args(&["-c", "getprop ro.build.version.release"])
             .output()
             .expect("");
-        let mut distro = String::from_utf8_lossy(&output_distro.stdout).trim().to_string();
+        let mut distro = String::from_utf8_lossy(&output_distro.stdout)
+            .trim()
+            .to_string();
         distro = ["Android ".to_string(), distro].concat();
         let output_flavor = std::process::Command::new("sh")
             .args(&["-c", "getprop ro.build.flavor"])
             .output()
             .expect("");
-        let flavor = String::from_utf8_lossy(&output_flavor.stdout).trim().to_string();
+        let flavor = String::from_utf8_lossy(&output_flavor.stdout)
+            .trim()
+            .to_string();
         let full = [distro, " (".to_string(), flavor, ")".to_string()].concat();
         Ok(full)
-
     } else {
         let distro = distro::dist("/bedrock/etc/os-release")
             .or_else(|_| distro::dist("/etc/os-release"))
@@ -116,29 +133,27 @@ pub fn env(var: &str) -> Option<String> {
                 .args(&["-c", "whoami"])
                 .output()
                 .expect("");
-            Some(String::from_utf8_lossy(&output_user.stdout).trim().to_string())
-        } else {
             Some(
-                env::var(var)
-                .unwrap_or_else(
-                    |_| format!("N/A (could not read ${}, are you sure it's set?)", var)
-                    )
-                )
+                String::from_utf8_lossy(&output_user.stdout)
+                    .trim()
+                    .to_string(),
+            )
+        } else {
+            Some(env::var(var).unwrap_or_else(|_| {
+                format!("N/A (could not read ${}, are you sure it's set?)", var)
+            }))
         }
     } else {
         Some(
-            env::var(var)
-            .unwrap_or_else(
-                |_| format!("N/A (could not read ${}, are you sure it's set?)", var)
-                )
-            )
+            env::var(var).unwrap_or_else(|_| {
+                format!("N/A (could not read ${}, are you sure it's set?)", var)
+            }),
+        )
     }
 }
 
 fn r#continue(output_check: String) -> Result<String, Error> {
-    let model = output_check
-        .split(':')
-        .collect::<Vec<&str>>()[2]
+    let model = output_check.split(':').collect::<Vec<&str>>()[2]
         .trim()
         .to_string();
     if model.starts_with("Advanced Micro Devices, Inc.") {
@@ -172,7 +187,9 @@ pub fn hostname() -> Result<String, Error> {
             .args(&["-c", "hostname"])
             .output()
             .expect("");
-        Ok(String::from_utf8_lossy(&output_hostname.stdout).trim().to_string())
+        Ok(String::from_utf8_lossy(&output_hostname.stdout)
+            .trim()
+            .to_string())
     } else {
         Ok(read_to_string("/etc/hostname")?.trim().to_string())
     }
@@ -186,12 +203,25 @@ pub fn kernel() -> Result<String, Error> {
         .replace("\n", ""))
 }
 
+// Obtain free physical memory in MBs, outputs to a Result<String>
+pub fn memory_free() -> Result<String, Error> {
+    return memory("MemFree");
+}
+
+// Obtain available memory for applications (without swap) in MBs, outputs to a Result<String>
+pub fn memory_available() -> Result<String, Error> {
+    return memory("MemAvailable");
+}
+
 /// Obtain total memory in MBs, outputs to a Result<String>
-pub fn memory() -> Result<String, Error> {
-    const MEMTOTAL: &str = "MemTotal";
+pub fn memory_total() -> Result<String, Error> {
+    return memory("MemTotal");
+}
+
+fn memory(mem_value: &str) -> Result<String, Error> {
+    let no_mem_info_error_msg: &str = &format!("No memoryinfo in {} line!", mem_value);
+    let no_memline_found_error_msg: &str = &format!("No {} line found in /proc/meminfo", mem_value);
     const MEMINFO: &str = "/proc/meminfo";
-    const ERROR_01: &str = "no MemTotal line found in /proc/meminfo!";
-    const ERROR_02: &str = "No memoryinfo in MemTotal line!";
     const UNIT: [&str; 5] = ["kB", "MB", "GB", "TB", "PB"];
     const SEPARATOR_COLON: &str = ":";
     const EMPTY_STRING: &str = "";
@@ -214,7 +244,7 @@ pub fn memory() -> Result<String, Error> {
 
     let meminfo = fs::read_to_string(MEMINFO)?;
     for line in meminfo.lines() {
-        if line.starts_with(MEMTOTAL) {
+        if line.starts_with(mem_value) {
             let mut rsplit = line.rsplit(SEPARATOR_COLON);
             let size = match rsplit.next() {
                 Some(x) => x
@@ -222,12 +252,15 @@ pub fn memory() -> Result<String, Error> {
                     .trim()
                     .parse::<u64>()
                     .to_io_result()?,
-                None => Err(io::Error::new(io::ErrorKind::Other, ERROR_02))?,
+                None => Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    no_memline_found_error_msg,
+                ))?,
             };
             return Ok(format!("{} {}", (size / DIVISOR_U64), UNIT_MB));
         }
     }
-    Err(io::Error::new(io::ErrorKind::Other, ERROR_01))?
+    Err(io::Error::new(io::ErrorKind::Other, no_mem_info_error_msg))?
 }
 
 // Music info
@@ -338,7 +371,10 @@ pub fn terminal() -> Result<String, Error> {
     let process_name = terminal::name(process_id.clone()).trim().replace("\n", "");
     let info = terminal::info(process_name, process_id).unwrap();
     if info == "systemd" || info.is_empty() {
-        Ok("N/A (could not determine the terminal, this could be an issue of using tmux)".to_string())
+        Ok(
+            "N/A (could not determine the terminal, this could be an issue of using tmux)"
+                .to_string(),
+        )
     } else {
         Ok(info)
     }
