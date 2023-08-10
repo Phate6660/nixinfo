@@ -1,14 +1,17 @@
 use std::env;
-use std::fs::{self, read_to_string, File};
-use std::io::{self, Error};
+use std::fs::{read_to_string, File};
+use std::io::Error;
 use std::process::Command;
 
 use glob::glob;
+use memory::memory;
+use memory::memory_formatter;
 use shared_functions::read;
 
 mod cpu;
 mod distro;
 mod environment;
+mod memory;
 mod packages;
 mod shared_functions;
 mod terminal;
@@ -205,62 +208,32 @@ pub fn kernel() -> Result<String, Error> {
 
 // Obtain free physical memory in MBs, outputs to a Result<String>
 pub fn memory_free() -> Result<String, Error> {
-    return memory("MemFree");
+    return memory_formatter(memory("MemFree"));
 }
 
 // Obtain available memory for applications (without swap) in MBs, outputs to a Result<String>
 pub fn memory_available() -> Result<String, Error> {
-    return memory("MemAvailable");
+    return memory_formatter(memory("MemAvailable"));
 }
 
 /// Obtain total memory in MBs, outputs to a Result<String>
 pub fn memory_total() -> Result<String, Error> {
-    return memory("MemTotal");
+    return memory_formatter(memory("MemTotal"));
 }
 
-fn memory(mem_value: &str) -> Result<String, Error> {
-    let no_mem_info_error_msg: &str = &format!("No memoryinfo in {} line!", mem_value);
-    let no_memline_found_error_msg: &str = &format!("No {} line found in /proc/meminfo", mem_value);
-    const MEMINFO: &str = "/proc/meminfo";
-    const UNIT: [&str; 5] = ["kB", "MB", "GB", "TB", "PB"];
-    const SEPARATOR_COLON: &str = ":";
-    const EMPTY_STRING: &str = "";
-
-    const DIVISOR_U64: u64 = 1024;
-    const UNIT_MB: &str = "MB";
-
-    pub trait ToIoResult<T> {
-        fn to_io_result(self) -> io::Result<T>;
+// Obtain used memory in MBs by subtracting free memory from total memory, outputs to a Result<string>
+pub fn memory_used() -> Result<String, Error> {
+    let total: Result<u64, Error> = memory("MemTotal");
+    if total.is_err() {
+        return Err(total.unwrap_err());
     }
 
-    impl<T, E: ToString> ToIoResult<T> for Result<T, E> {
-        fn to_io_result(self) -> io::Result<T> {
-            match self {
-                Ok(x) => Ok(x),
-                Err(err) => Err(io::Error::new(io::ErrorKind::Other, err.to_string())),
-            }
-        }
+    let free: Result<u64, Error> = memory("MemAvailable");
+    if free.is_err() {
+        return Err(free.unwrap_err());
     }
 
-    let meminfo = fs::read_to_string(MEMINFO)?;
-    for line in meminfo.lines() {
-        if line.starts_with(mem_value) {
-            let mut rsplit = line.rsplit(SEPARATOR_COLON);
-            let size = match rsplit.next() {
-                Some(x) => x
-                    .replace(UNIT[0], EMPTY_STRING)
-                    .trim()
-                    .parse::<u64>()
-                    .to_io_result()?,
-                None => Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    no_memline_found_error_msg,
-                ))?,
-            };
-            return Ok(format!("{} {}", (size / DIVISOR_U64), UNIT_MB));
-        }
-    }
-    Err(io::Error::new(io::ErrorKind::Other, no_mem_info_error_msg))?
+    return memory_formatter(Ok(total.unwrap() - free.unwrap()));
 }
 
 // Music info
