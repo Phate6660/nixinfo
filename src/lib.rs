@@ -14,23 +14,18 @@ mod shared_functions;
 mod terminal;
 mod uptime;
 
-pub struct TempZone {
-    temp: f64,
-    device_type: String,
-}
-
-/// Obtain the temp of CPU thermal zones. Outputs to a Result<Vec<TempZone>>
-pub fn temp() -> Result<Vec<TempZone>, Error> {
+/// Obtain the temp of CPU thermal zones. Outputs to a Result<Vec<(String, String)>>
+pub fn temp() -> Result<Vec<(String, String)>, Error> {
     let thermal_path: String = String::from("/sys/class/thermal/");
     let thermal_zone_path: String = format!("{}{}", thermal_path, "/thermal_zone");
     let paths: fs::ReadDir = fs::read_dir(thermal_path).unwrap();
-    let mut temp_data: Vec<TempZone> = Vec::new();
+    let mut zone_temps: Vec<(String, String)> = Vec::new();
 
     for path in paths {
         let path: std::path::PathBuf = path.unwrap().path();
         let path_str: std::borrow::Cow<str> = path.as_path().to_string_lossy().to_owned();
         if path_str.starts_with(thermal_zone_path.as_str()) {
-            let name: String = read_to_string(path_str.to_string() + "/type")?
+            let zone_name: String = read_to_string(path_str.to_string() + "/type")?
                 .trim()
                 .to_owned();
             let temp: f64 = read_to_string(path_str.to_string() + "/temp")?
@@ -38,13 +33,10 @@ pub fn temp() -> Result<Vec<TempZone>, Error> {
                 .parse::<f64>()
                 .unwrap()
                 / 1000.0;
-            temp_data.push(TempZone {
-                temp,
-                device_type: name,
-            });
+            zone_temps.push((zone_name, temp.to_string()));
         }
     }
-    Ok(temp_data)
+    Ok(zone_temps)
 }
 
 /// Obtain CPU model, outputs to a Result<String>
