@@ -14,9 +14,25 @@ mod shared_functions;
 mod terminal;
 mod uptime;
 
-/// Obtain the temp of the CPU in Celsius, only tested on rpi, outputs to a Result<String>
-pub fn temp() -> Result<String, Error> {
-    Ok(format!("{}", read_to_string("/sys/class/thermal/thermal_zone0/temp")?.trim().parse::<f64>().unwrap() / 1000.0))
+/// Obtain the temp of CPU thermal zones. Outputs to a Result<Vec<(String, String)>>
+pub fn temp() -> Result<Vec<(String, String)>, Error> {
+    let paths = glob("/sys/class/thermal/thermal_zone*").expect("Failed to read path");
+    let mut zone_temps: Vec<(String, String)> = Vec::new();
+
+    for path in paths {
+        let path: std::path::PathBuf = path.unwrap();
+        let path_str: String= path.as_path().to_string_lossy().to_owned().to_string();
+        let zone_name: String = read_to_string(path_str.to_owned() + "/type")?
+            .trim()
+            .to_owned();
+        let temp: f64 = read_to_string(path_str.to_owned() + "/temp")?
+            .trim()
+            .parse::<f64>()
+            .unwrap()
+            / 1000.0;
+            zone_temps.push((zone_name, temp.to_string()));
+        }
+    Ok(zone_temps)
 }
 
 /// Obtain CPU model, outputs to a Result<String>
@@ -46,25 +62,32 @@ pub fn device() -> Result<String, Error> {
             .args(&["-c", "getprop ro.product.name"])
             .output()
             .expect("");
-        let product = String::from_utf8_lossy(&output_product.stdout).trim().to_string();
+        let product = String::from_utf8_lossy(&output_product.stdout)
+            .trim()
+            .to_string();
         let output_model = std::process::Command::new("sh")
             .args(&["-c", "getprop ro.product.model"])
             .output()
             .expect("");
-        let model = String::from_utf8_lossy(&output_model.stdout).trim().to_string();
+        let model = String::from_utf8_lossy(&output_model.stdout)
+            .trim()
+            .to_string();
         let output_device = std::process::Command::new("sh")
             .args(&["-c", "getprop ro.product.device"])
             .output()
             .expect("");
-        let device = String::from_utf8_lossy(&output_device.stdout).trim().to_string();
+        let device = String::from_utf8_lossy(&output_device.stdout)
+            .trim()
+            .to_string();
         let full = [
-            product, 
-            " ".to_string(), 
-            model, 
-            " (".to_string(), 
-            device, 
-            ")".to_string()
-        ].concat();
+            product,
+            " ".to_string(),
+            model,
+            " (".to_string(),
+            device,
+            ")".to_string(),
+        ]
+        .concat();
         Ok(full)
     } else {
         let model = read_to_string("/sys/devices/virtual/dmi/id/product_name")
@@ -80,16 +103,19 @@ pub fn distro() -> Result<String, Error> {
             .args(&["-c", "getprop ro.build.version.release"])
             .output()
             .expect("");
-        let mut distro = String::from_utf8_lossy(&output_distro.stdout).trim().to_string();
+        let mut distro = String::from_utf8_lossy(&output_distro.stdout)
+            .trim()
+            .to_string();
         distro = ["Android ".to_string(), distro].concat();
         let output_flavor = std::process::Command::new("sh")
             .args(&["-c", "getprop ro.build.flavor"])
             .output()
             .expect("");
-        let flavor = String::from_utf8_lossy(&output_flavor.stdout).trim().to_string();
+        let flavor = String::from_utf8_lossy(&output_flavor.stdout)
+            .trim()
+            .to_string();
         let full = [distro, " (".to_string(), flavor, ")".to_string()].concat();
         Ok(full)
-
     } else {
         let distro = distro::dist("/bedrock/etc/os-release")
             .or_else(|_| distro::dist("/etc/os-release"))
@@ -116,29 +142,27 @@ pub fn env(var: &str) -> Option<String> {
                 .args(&["-c", "whoami"])
                 .output()
                 .expect("");
-            Some(String::from_utf8_lossy(&output_user.stdout).trim().to_string())
-        } else {
             Some(
-                env::var(var)
-                .unwrap_or_else(
-                    |_| format!("N/A (could not read ${}, are you sure it's set?)", var)
-                    )
-                )
+                String::from_utf8_lossy(&output_user.stdout)
+                    .trim()
+                    .to_string(),
+            )
+        } else {
+            Some(env::var(var).unwrap_or_else(|_| {
+                format!("N/A (could not read ${}, are you sure it's set?)", var)
+            }))
         }
     } else {
         Some(
-            env::var(var)
-            .unwrap_or_else(
-                |_| format!("N/A (could not read ${}, are you sure it's set?)", var)
-                )
-            )
+            env::var(var).unwrap_or_else(|_| {
+                format!("N/A (could not read ${}, are you sure it's set?)", var)
+            }),
+        )
     }
 }
 
 fn r#continue(output_check: String) -> Result<String, Error> {
-    let model = output_check
-        .split(':')
-        .collect::<Vec<&str>>()[2]
+    let model = output_check.split(':').collect::<Vec<&str>>()[2]
         .trim()
         .to_string();
     if model.starts_with("Advanced Micro Devices, Inc.") {
@@ -172,7 +196,9 @@ pub fn hostname() -> Result<String, Error> {
             .args(&["-c", "hostname"])
             .output()
             .expect("");
-        Ok(String::from_utf8_lossy(&output_hostname.stdout).trim().to_string())
+        Ok(String::from_utf8_lossy(&output_hostname.stdout)
+            .trim()
+            .to_string())
     } else {
         Ok(read_to_string("/etc/hostname")?.trim().to_string())
     }
@@ -338,7 +364,10 @@ pub fn terminal() -> Result<String, Error> {
     let process_name = terminal::name(process_id.clone()).trim().replace("\n", "");
     let info = terminal::info(process_name, process_id).unwrap();
     if info == "systemd" || info.is_empty() {
-        Ok("N/A (could not determine the terminal, this could be an issue of using tmux)".to_string())
+        Ok(
+            "N/A (could not determine the terminal, this could be an issue of using tmux)"
+                .to_string(),
+        )
     } else {
         Ok(info)
     }

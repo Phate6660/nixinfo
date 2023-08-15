@@ -5,9 +5,9 @@ To use: `nixinfo = "0.3.2"` in your `Cargo.toml`.
 
 ## Currently supported
 
-- CPU model and temperature (Celsius)
+- CPU model and temperature by thermal zones (Celsius)
   + `nixinfo::cpu()` -> `Result<String>`
-  + `nixinfo::temp()` -> `Result<String>`
+  + `nixinfo::temp()` -> `Result<Vec<TempZone>>`
 - Device name
   + `nixinfo::device()` -> `Result<String>`
 - Distro name
