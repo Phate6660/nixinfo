@@ -16,26 +16,22 @@ mod uptime;
 
 /// Obtain the temp of CPU thermal zones. Outputs to a Result<Vec<(String, String)>>
 pub fn temp() -> Result<Vec<(String, String)>, Error> {
-    let thermal_path: String = String::from("/sys/class/thermal/");
-    let thermal_zone_path: String = format!("{}{}", thermal_path, "/thermal_zone");
-    let paths: fs::ReadDir = fs::read_dir(thermal_path).unwrap();
+    let paths = glob("/sys/class/thermal/thermal_zone*").expect("Failed to read path");
     let mut zone_temps: Vec<(String, String)> = Vec::new();
 
     for path in paths {
-        let path: std::path::PathBuf = path.unwrap().path();
-        let path_str: std::borrow::Cow<str> = path.as_path().to_string_lossy().to_owned();
-        if path_str.starts_with(thermal_zone_path.as_str()) {
-            let zone_name: String = read_to_string(path_str.to_string() + "/type")?
-                .trim()
-                .to_owned();
-            let temp: f64 = read_to_string(path_str.to_string() + "/temp")?
-                .trim()
-                .parse::<f64>()
-                .unwrap()
-                / 1000.0;
+        let path: std::path::PathBuf = path.unwrap();
+        let path_str: String= path.as_path().to_string_lossy().to_owned().to_string();
+        let zone_name: String = read_to_string(path_str.to_owned() + "/type")?
+            .trim()
+            .to_owned();
+        let temp: f64 = read_to_string(path_str.to_owned() + "/temp")?
+            .trim()
+            .parse::<f64>()
+            .unwrap()
+            / 1000.0;
             zone_temps.push((zone_name, temp.to_string()));
         }
-    }
     Ok(zone_temps)
 }
 
