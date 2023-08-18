@@ -2,7 +2,7 @@
 name = "nixinfo"
 description = "A lib crate for gathering system info such as cpu, distro, environment, kernel, etc in Rust."
 homepage = "https://github.com/Phate6660/nixinfo"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Ash <valleyknight@protonmail.com>"]
 edition = "2018"
 license = "Unlicense"
@@ -15,4 +15,4 @@ music_playerctl = []
 
 [dependencies]
 glob = "0.3.0"
-mpd = { version = "0.0.12", optional = true }
+mpd = { version = "0.1.0", optional = true }
