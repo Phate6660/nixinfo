@@ -7,7 +7,8 @@ To use: `nixinfo = "0.3.2"` in your `Cargo.toml`.
 
 - CPU model and temperature by thermal zones (Celsius)
   + `nixinfo::cpu()` -> `Result<String>`
-  + `nixinfo::temp()` -> `Result<Vec<TempZone>>`
+  + `nixinfo::temp()` -> `Result<Vec<(String, String)>>`
+    * The tuple contains the device name and the temperature in that order
 - Device name
   + `nixinfo::device()` -> `Result<String>`
 - Distro name
@@ -44,5 +45,21 @@ To use: `nixinfo = "0.3.2"` in your `Cargo.toml`.
   + `nixinfo::uptime()` -> `Result<String>`
 
 ## TODO
-
+- Get all package counts in pure Rust
+  + apk
+  + apt/dpkg
+  + dnf
+  + eopkg
+  + flatpak
+  + pacman
+    * explicitly installed
+    * ~~total installed~~
+  + pip
+  + ~~portage~~
+    * ~~explicitly installed~~
+    * ~~total installed~~
+  * rpm
+  * xbps
+- Get GPU in pure Rust
+- Restructure code
 - Support *BSD
