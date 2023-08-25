@@ -24,17 +24,15 @@ pub fn temp() -> Result<Vec<(String, String)>, Error> {
 
     for path in paths {
         let path: std::path::PathBuf = path.unwrap();
-        let path_str: String= path.as_path().to_string_lossy().to_owned().to_string();
-        let zone_name: String = read_to_string(path_str.to_owned() + "/type")?
-            .trim()
-            .to_owned();
+        let path_str: String = path.as_path().to_string_lossy().to_owned().to_string();
+        let zone_name: String = read_to_string(path_str.to_owned() + "/type")?.trim().to_owned();
         let temp: f64 = read_to_string(path_str.to_owned() + "/temp")?
             .trim()
             .parse::<f64>()
             .unwrap()
             / 1000.0;
-            zone_temps.push((zone_name, temp.to_string()));
-        }
+        zone_temps.push((zone_name, temp.to_string()));
+    }
     Ok(zone_temps)
 }
 
@@ -89,8 +87,7 @@ pub fn device() -> Result<String, Error> {
             " (".to_string(),
             device,
             ")".to_string(),
-        ]
-        .concat();
+        ].concat();
         Ok(full)
     } else {
         let model = read_to_string("/sys/devices/virtual/dmi/id/product_name")
@@ -145,22 +142,13 @@ pub fn env(var: &str) -> Option<String> {
                 .args(&["-c", "whoami"])
                 .output()
                 .expect("");
-            Some(
-                String::from_utf8_lossy(&output_user.stdout)
-                    .trim()
-                    .to_string(),
-            )
+            Some(String::from_utf8_lossy(&output_user.stdout).trim().to_string())
         } else {
-            Some(env::var(var).unwrap_or_else(|_| {
-                format!("N/A (could not read ${}, are you sure it's set?)", var)
-            }))
+            Some(env::var(var).unwrap_or_else(|_| {format!("N/A (could not read ${}, are you sure it's set?)", var)}))
         }
     } else {
         Some(
-            env::var(var).unwrap_or_else(|_| {
-                format!("N/A (could not read ${}, are you sure it's set?)", var)
-            }),
-        )
+            env::var(var).unwrap_or_else(|_| {format!("N/A (could not read ${}, are you sure it's set?)", var)}))
     }
 }
 
@@ -305,8 +293,15 @@ pub fn packages(manager: &str) -> Result<String, Error> {
             Ok(format!("{}", packages::count(output)))
         }
         "pacman" => {
-            let output = Command::new("pacman").args(&["-Q", "-q"]).output()?;
-            Ok(format!("{}", packages::count(output)))
+            let mut list: Vec<String> = Vec::new();
+            for entry in glob("/var/lib/pacman/local/*").expect("Failed to read glob pattern") {
+                match entry {
+                    Ok(path) => list.push(path.display().to_string()),
+                    Err(e) => println!("{:?}", e),
+                }
+            }
+            let total = list.iter().count() - 1; // -1 to deal with `ALPM_DB_VERSION` file
+            Ok(format!("{}", total))
         }
         "pip" => {
             let output = Command::new("pip").arg("list").output()?;
@@ -315,7 +310,6 @@ pub fn packages(manager: &str) -> Result<String, Error> {
         "portage" => {
             let content = read(File::open("/var/lib/portage/world").unwrap()).unwrap();
             let file_vector: Vec<&str> = content.split('\n').collect();
-
             let mut list: Vec<String> = Vec::new();
             for entry in glob("/var/db/pkg/*/*/").expect("Failed to read glob pattern") {
                 match entry {
@@ -323,7 +317,6 @@ pub fn packages(manager: &str) -> Result<String, Error> {
                     Err(e) => println!("{:?}", e),
                 }
             }
-
             Ok(format!(
                 "{} (explicit), {} (total)",
                 file_vector.iter().count() - 1,
@@ -353,10 +346,7 @@ pub fn terminal() -> Result<String, Error> {
     let process_name = terminal::name(process_id.clone()).trim().replace("\n", "");
     let info = terminal::info(process_name, process_id).unwrap();
     if info == "systemd" || info.is_empty() {
-        Ok(
-            "N/A (could not determine the terminal, this could be an issue of using tmux)"
-                .to_string(),
-        )
+        Ok("N/A (could not determine the terminal, this could be an issue of using tmux)".to_string())
     } else {
         Ok(info)
     }
