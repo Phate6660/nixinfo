@@ -5,7 +5,7 @@ I may often be behind on updating the release on crates.io.
 
 So if you want the latest and greatest, add:
 
-`nixinfo = { git = "https://github.com/Phate6660" }`
+`nixinfo = { git = "https://github.com/Phate6660/nixinfo" }`
 
 To your dependencies section in `Cargo.toml`.
 
