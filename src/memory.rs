@@ -1,7 +1,7 @@
 use std::fs::{self};
 use std::io::{self, Error};
 
-pub fn memory(mem_value: &str) -> Result<u64, Error> {
+pub fn memory(mem_value: &str) -> Result<(u64, String), Error> {
     let no_mem_info_error_msg: &str = &format!("No memoryinfo in {} line!", mem_value);
     let no_memline_found_error_msg: &str = &format!("No {} line found in /proc/meminfo", mem_value);
     const MEMINFO: &str = "/proc/meminfo";
@@ -37,22 +37,26 @@ pub fn memory(mem_value: &str) -> Result<u64, Error> {
                     no_memline_found_error_msg,
                 ))?,
             };
-            return Ok(size);
+            let unit: String = if size <= 999 {
+                "MB".to_string()
+            } else if size >= 1000 {
+                "GB".to_string()
+            } else {
+                "MB".to_string()
+            };
+
+            return Ok((size, unit));
         }
     }
     Err(io::Error::new(io::ErrorKind::Other, no_mem_info_error_msg))?
 }
 
-pub fn memory_formatter(mem_result: Result<u64, Error>) -> Result<String, Error> {
-    if mem_result.is_err() {
-        return Err(mem_result.unwrap_err());
-    }
-
-    const DIVISOR_U64: u64 = 1024;
-    const UNIT_MB: &str = "MB";
-    return Ok(format!(
-        "{} {}",
-        (mem_result.unwrap() / DIVISOR_U64),
-        UNIT_MB
-    ));
+pub fn memory_formatter(mem_result: u64, unit: String) -> Result<String, Error> {
+    let final_result = match unit.as_str() {
+        "MB" => mem_result / 1000,
+        "GB" => mem_result / (1000*1000),
+        _ => mem_result / 1000
+    };
+    let output = format!("{} {}", final_result, unit);
+    Ok(output)
 }

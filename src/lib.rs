@@ -205,32 +205,28 @@ pub fn kernel() -> Result<String, Error> {
 
 // Obtain free physical memory in MBs, outputs to a Result<String>
 pub fn memory_free() -> Result<String, Error> {
-    return memory_formatter(memory("MemFree"));
+    let (size, unit) = memory("MemFree").unwrap();
+    memory_formatter(size, unit)
 }
 
 // Obtain available memory for applications (without swap) in MBs, outputs to a Result<String>
 pub fn memory_available() -> Result<String, Error> {
-    return memory_formatter(memory("MemAvailable"));
+    let (size, unit) = memory("MemAvailable").unwrap();
+    memory_formatter(size, unit)
 }
 
 /// Obtain total memory in MBs, outputs to a Result<String>
 pub fn memory_total() -> Result<String, Error> {
-    return memory_formatter(memory("MemTotal"));
+    let (size, unit) = memory("MemTotal").unwrap();
+    memory_formatter(size, unit)
 }
 
 // Obtain used memory in MBs by subtracting free memory from total memory, outputs to a Result<string>
 pub fn memory_used() -> Result<String, Error> {
-    let total: Result<u64, Error> = memory("MemTotal");
-    if total.is_err() {
-        return Err(total.unwrap_err());
-    }
+    let (total_size, unit) = memory("MemTotal").unwrap();
+    let (free_size, _) = memory("MemFree").unwrap();
 
-    let free: Result<u64, Error> = memory("MemAvailable");
-    if free.is_err() {
-        return Err(free.unwrap_err());
-    }
-
-    return memory_formatter(Ok(total.unwrap() - free.unwrap()));
+    memory_formatter(total_size - free_size, unit)
 }
 
 // Music info
