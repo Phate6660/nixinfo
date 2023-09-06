@@ -237,9 +237,11 @@ pub fn music() -> Result<String, Box<dyn std::error::Error>> {
     let song = c.currentsong().unwrap().unwrap();
     let na = "N/A".to_string();
     let tit = song.title.as_ref().unwrap();
-    let art = song.tags.get("Artist").unwrap_or(&na);
-    let alb = song.tags.get("Album").unwrap_or(&na);
-    let dat = song.tags.get("Date").unwrap_or(&na);
+    let art = song.artist.unwrap_or(na);
+    // TODO: Figure how the heck to actually accurately obtain the info from the tags without
+    // guesswork.
+    let alb = &song.tags[2].1; // tags[2].1 seems to be the album
+    let dat = &song.tags[4].1; // tags[4].1 seems to be the date
     Ok(format!("{} - {} ({}) - {}", art, alb, dat, tit))
 }
 
