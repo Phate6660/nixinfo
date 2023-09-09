@@ -70,6 +70,6 @@ Otherwise add: `nixinfo = "0.3.2"` instead.
     * ~~total installed~~
   * rpm
   * xbps
-- Get GPU in pure Rust
+- ~~Get GPU in pure Rust~~
 - Restructure code
 - Support *BSD
