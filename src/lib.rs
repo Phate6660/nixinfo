@@ -152,30 +152,46 @@ pub fn env(var: &str) -> Option<String> {
     }
 }
 
-fn r#continue(output_check: String) -> Result<String, Error> {
-    let model = output_check.split(':').collect::<Vec<&str>>()[2]
-        .trim()
-        .to_string();
-    if model.starts_with("Advanced Micro Devices, Inc.") {
-        Ok(model.split('.').collect::<Vec<&str>>()[1]
-            .trim()
-            .replace(['[', ']', '\n'], ""))
-    } else {
-        Ok(model.replace('\n', ""))
-    }
-}
-
 /// Obtain the name of the GPU, outputs to a string
-pub fn gpu() -> Result<String, Error> {
-    let output = Command::new("sh")
-        .args(["-c", "lspci | grep -I 'VGA\\|Display\\|3D'"])
-        .output()?;
-    let output_check: String = String::from_utf8_lossy(&output.stdout).to_string();
-    if output_check.is_empty() {
-        Ok("N/A (could not run lspci/grep, make sure they are installed)".to_string())
-    } else {
-        r#continue(output_check)
+pub fn gpu() -> Result<Vec<String>, Error> {
+    let mut gpu_vec: Vec<String> = Vec::new();
+    for entry in glob("/sys/class/drm/card?/device/device").expect("Failed to read glob pattern") {
+        match entry {
+            Ok(path) => {
+                let device_id = read_to_string(path)?;
+                let true_device_id = device_id.trim();
+                let searchable_device_id = true_device_id.split('x').collect::<Vec<&str>>()[1];
+                gpu_vec.push(searchable_device_id.to_string());
+            },
+            Err(e) => println!("{:?}", e),
+        }
     }
+    let all_ids = read_to_string("/usr/share/hwdata/pci.ids")?;
+    let mut gpu_names_vec: Vec<String> = Vec::new();
+    let mut gpu_1_found = false;
+    let mut gpu_2_found = false;
+    for line in all_ids.split('\n') {
+        match line {
+            _ if line.contains(&gpu_vec[0]) => {
+                if gpu_1_found {
+                    continue
+                }
+                let split_line = line.split(&gpu_vec[0]).collect::<Vec<&str>>()[1];
+                gpu_names_vec.push(split_line.trim().to_string());
+                gpu_1_found = true;
+            },
+            _ if line.contains(&gpu_vec[1]) => {
+                if gpu_2_found {
+                    continue
+                }
+                let split_line = line.split(&gpu_vec[1]).collect::<Vec<&str>>()[1];
+                gpu_names_vec.push(split_line.trim().to_string());
+                gpu_2_found = true;
+            },
+            _ => (),
+        }
+    }
+    Ok(gpu_names_vec)
 }
 
 /// Obtain the hostname, outputs to a Result<String>
