@@ -152,8 +152,13 @@ pub fn env(var: &str) -> Option<String> {
     }
 }
 
-/// Obtain the name of the GPU, outputs to a string
+/// Obtain a vector containing the names of the GPUs, outputs to a `Result<Vec<String>>`
 pub fn gpu() -> Result<Vec<String>, Error> {
+    // TODO: Currently, this only matches the device name.
+    // (Which are unique for the most part, but there are a couple
+    // devices here and there which have the same ID.)
+    // So I also need to match vendor ID as well, which is contained on
+    // a separate line from the device name.
     let mut gpu_vec: Vec<String> = Vec::new();
     for entry in glob("/sys/class/drm/card?/device/device").expect("Failed to read glob pattern") {
         match entry {
