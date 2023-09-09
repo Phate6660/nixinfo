@@ -42,7 +42,7 @@ pub fn cpu() -> Result<String, Error> {
     let model = read_to_string("/sys/firmware/devicetree/base/model");
     fn info(file: File, line: usize) -> Result<String, Error> {
         let info = cpu::get(file, line);
-        Ok(cpu::format(info).trim().to_string().replace("\n", ""))
+        Ok(cpu::format(info).trim().to_string().replace('\n', ""))
     }
     if let Ok(model) = model {
         match model.starts_with("Raspberry") {
@@ -60,21 +60,21 @@ pub fn cpu() -> Result<String, Error> {
 pub fn device() -> Result<String, Error> {
     if shared_functions::exit_code() != 1 {
         let output_product = std::process::Command::new("sh")
-            .args(&["-c", "getprop ro.product.name"])
+            .args(["-c", "getprop ro.product.name"])
             .output()
             .expect("");
         let product = String::from_utf8_lossy(&output_product.stdout)
             .trim()
             .to_string();
         let output_model = std::process::Command::new("sh")
-            .args(&["-c", "getprop ro.product.model"])
+            .args(["-c", "getprop ro.product.model"])
             .output()
             .expect("");
         let model = String::from_utf8_lossy(&output_model.stdout)
             .trim()
             .to_string();
         let output_device = std::process::Command::new("sh")
-            .args(&["-c", "getprop ro.product.device"])
+            .args(["-c", "getprop ro.product.device"])
             .output()
             .expect("");
         let device = String::from_utf8_lossy(&output_device.stdout)
@@ -92,7 +92,7 @@ pub fn device() -> Result<String, Error> {
     } else {
         let model = read_to_string("/sys/devices/virtual/dmi/id/product_name")
             .or_else(|_| read_to_string("/sys/firmware/devicetree/base/model"))?;
-        Ok(model.trim().replace("\n", ""))
+        Ok(model.trim().replace('\n', ""))
     }
 }
 
@@ -100,7 +100,7 @@ pub fn device() -> Result<String, Error> {
 pub fn distro() -> Result<String, Error> {
     if shared_functions::exit_code() != 1 {
         let output_distro = std::process::Command::new("sh")
-            .args(&["-c", "getprop ro.build.version.release"])
+            .args(["-c", "getprop ro.build.version.release"])
             .output()
             .expect("");
         let mut distro = String::from_utf8_lossy(&output_distro.stdout)
@@ -108,7 +108,7 @@ pub fn distro() -> Result<String, Error> {
             .to_string();
         distro = ["Android ".to_string(), distro].concat();
         let output_flavor = std::process::Command::new("sh")
-            .args(&["-c", "getprop ro.build.flavor"])
+            .args(["-c", "getprop ro.build.flavor"])
             .output()
             .expect("");
         let flavor = String::from_utf8_lossy(&output_flavor.stdout)
@@ -139,7 +139,7 @@ pub fn env(var: &str) -> Option<String> {
     if shared_functions::exit_code() != 1 {
         if var == "USER" {
             let output_user = std::process::Command::new("sh")
-                .args(&["-c", "whoami"])
+                .args(["-c", "whoami"])
                 .output()
                 .expect("");
             Some(String::from_utf8_lossy(&output_user.stdout).trim().to_string())
@@ -159,18 +159,16 @@ fn r#continue(output_check: String) -> Result<String, Error> {
     if model.starts_with("Advanced Micro Devices, Inc.") {
         Ok(model.split('.').collect::<Vec<&str>>()[1]
             .trim()
-            .replace("[", "")
-            .replace("]", "")
-            .replace("\n", ""))
+            .replace(['[', ']', '\n'], ""))
     } else {
-        Ok(model.replace("\n", ""))
+        Ok(model.replace('\n', ""))
     }
 }
 
 /// Obtain the name of the GPU, outputs to a string
 pub fn gpu() -> Result<String, Error> {
     let output = Command::new("sh")
-        .args(&["-c", "lspci | grep -I 'VGA\\|Display\\|3D'"])
+        .args(["-c", "lspci | grep -I 'VGA\\|Display\\|3D'"])
         .output()?;
     let output_check: String = String::from_utf8_lossy(&output.stdout).to_string();
     if output_check.is_empty() {
@@ -184,7 +182,7 @@ pub fn gpu() -> Result<String, Error> {
 pub fn hostname() -> Result<String, Error> {
     if shared_functions::exit_code() != 1 {
         let output_hostname = std::process::Command::new("sh")
-            .args(&["-c", "hostname"])
+            .args(["-c", "hostname"])
             .output()
             .expect("");
         Ok(String::from_utf8_lossy(&output_hostname.stdout)
@@ -200,7 +198,7 @@ pub fn kernel() -> Result<String, Error> {
     Ok(read_to_string("/proc/sys/kernel/osrelease")?
         .trim()
         .to_string()
-        .replace("\n", ""))
+        .replace('\n', ""))
 }
 
 // Obtain free physical memory in MBs, outputs to a Result<String>
@@ -278,11 +276,11 @@ pub fn packages(manager: &str) -> Result<String, Error> {
             Ok(format!("{}", packages::count(output)))
         }
         "apt" | "dpkg" => {
-            let output = Command::new("dpkg").args(&["--get-selections"]).output()?;
+            let output = Command::new("dpkg").args(["--get-selections"]).output()?;
             Ok(format!("{}", packages::count(output)))
         }
         "dnf" => {
-            let output = Command::new("dnf").args(&["list", "installed"]).output()?;
+            let output = Command::new("dnf").args(["list", "installed"]).output()?;
             Ok(format!("{}", packages::count(output)))
         }
         "eopkg" => {
@@ -290,7 +288,7 @@ pub fn packages(manager: &str) -> Result<String, Error> {
             Ok(format!("{}", packages::count(output)))
         }
         "flatpak" => {
-            let output = Command::new("flatpak").args(&["list"]).output()?;
+            let output = Command::new("flatpak").args(["list"]).output()?;
             Ok(format!("{}", packages::count(output)))
         }
         "pacman" => {
@@ -301,7 +299,7 @@ pub fn packages(manager: &str) -> Result<String, Error> {
                     Err(e) => println!("{:?}", e),
                 }
             }
-            let total = list.iter().count() - 1; // -1 to deal with `ALPM_DB_VERSION` file
+            let total = list.len() - 1; // -1 to deal with `ALPM_DB_VERSION` file
             Ok(format!("{}", total))
         }
         "pip" => {
@@ -320,12 +318,12 @@ pub fn packages(manager: &str) -> Result<String, Error> {
             }
             Ok(format!(
                 "{} (explicit), {} (total)",
-                file_vector.iter().count() - 1,
-                list.iter().count()
+                file_vector.len() - 1,
+                list.len()
             ))
         }
         "rpm" => {
-            let output = Command::new("rpm").args(&["-q", "-a"]).output()?;
+            let output = Command::new("rpm").args(["-q", "-a"]).output()?;
             Ok(format!("{}", packages::count(output)))
         }
         "xbps" => {
@@ -343,8 +341,8 @@ pub fn packages(manager: &str) -> Result<String, Error> {
 pub fn terminal() -> Result<String, Error> {
     let id = std::process::id();
     let path = format!("/proc/{}/status", id);
-    let process_id = terminal::ppid(File::open(path)?).trim().replace("\n", "");
-    let process_name = terminal::name(process_id.clone()).trim().replace("\n", "");
+    let process_id = terminal::ppid(File::open(path)?).trim().replace('\n', "");
+    let process_name = terminal::name(process_id.clone()).trim().replace('\n', "");
     let info = terminal::info(process_name, process_id).unwrap();
     if info == "systemd" || info.is_empty() {
         Ok("N/A (could not determine the terminal, this could be an issue of using tmux)".to_string())

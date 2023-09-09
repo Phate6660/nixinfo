@@ -10,7 +10,7 @@ pub fn de() -> Result<String, Error> {
 
 pub fn wm() -> Result<String, Error> {
     let path = format!("{}/.xinitrc", env::var("HOME").unwrap());
-    let file = std::fs::File::open(&path)?;
+    let file = std::fs::File::open(path)?;
     let contents = crate::shared_functions::read(file).unwrap();
     let line = contents.lines().last().unwrap();
     Ok(line.split(' ').last().unwrap().to_string())

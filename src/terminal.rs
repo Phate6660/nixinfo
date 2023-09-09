@@ -22,8 +22,8 @@ pub fn info(process_name: String, process_id: String) -> Result<String, Error> {
         || process_name.starts_with("tmux")
     {
         let path = format!("/proc/{}/status", process_id);
-        let new_ppid = ppid(File::open(path)?).trim().replace("\n", "");
-        let new_name = name(new_ppid.clone()).trim().replace("\n", "");
+        let new_ppid = ppid(File::open(path)?).trim().replace('\n', "");
+        let new_name = name(new_ppid.clone()).trim().replace('\n', "");
         if new_name.ends_with("sh")
             || new_name == "ion"
             || new_name == "screen"
@@ -31,12 +31,12 @@ pub fn info(process_name: String, process_id: String) -> Result<String, Error> {
             || new_name.starts_with("tmux")
         {
             let path = format!("/proc/{}/status", new_ppid);
-            let new_ppid = ppid(File::open(path)?).trim().replace("\n", "");
-            Ok(name(new_ppid).trim().replace("\n", ""))
+            let new_ppid = ppid(File::open(path)?).trim().replace('\n', "");
+            Ok(name(new_ppid).trim().replace('\n', ""))
         } else {
-            Ok(new_name.trim().replace("\n", ""))
+            Ok(new_name.trim().replace('\n', ""))
         }
     } else {
-        Ok(process_name.trim().replace("\n", ""))
+        Ok(process_name.trim().replace('\n', ""))
     }
 }

@@ -5,7 +5,7 @@ use std::io::{BufReader, Read};
 /// Returns the exit code of `which getprop > /dev/null 2>&1"`
 pub fn exit_code() -> i32 {
     let status = std::process::Command::new("sh")
-        .args(&["-c", "which getprop > /dev/null 2>&1"])
+        .args(["-c", "which getprop > /dev/null 2>&1"])
         .status()
         .expect("");
     status.code().unwrap()
