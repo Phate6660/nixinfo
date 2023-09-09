@@ -154,30 +154,41 @@ pub fn env(var: &str) -> Option<String> {
 
 /// Obtain a vector containing the names of the GPUs, outputs to a `Result<Vec<String>>`
 pub fn gpu() -> Result<Vec<String>, Error> {
-    // TODO: Currently, this only matches the device name.
-    // (Which are unique for the most part, but there are a couple
-    // devices here and there which have the same ID.)
-    // So I also need to match vendor ID as well, which is contained on
-    // a separate line from the device name.
-    let mut gpu_vec: Vec<String> = Vec::new();
-    for entry in glob("/sys/class/drm/card?/device/device").expect("Failed to read glob pattern") {
+    let mut gpu_dev_vec: Vec<String> = Vec::new();
+    let mut gpu_vendor_vec: Vec<String> = Vec::new();
+    for entry in glob("/sys/class/drm/card?/device/").expect("Failed to read glob pattern") {
         match entry {
             Ok(path) => {
-                let device_id = read_to_string(path)?;
+                let device_path = format!("{}/device", path.display());
+                let vendor_path = format!("{}/vendor", path.display());
+                let device_id = read_to_string(device_path)?;
+                let vendor_id = read_to_string(vendor_path)?;
                 let true_device_id = device_id.trim();
+                let true_vendor_id = vendor_id.trim();
                 let searchable_device_id = true_device_id.split('x').collect::<Vec<&str>>()[1];
-                gpu_vec.push(searchable_device_id.to_string());
+                let searchable_vendor_id = true_vendor_id.split('x').collect::<Vec<&str>>()[1];
+                gpu_dev_vec.push(searchable_device_id.to_string());
+                gpu_vendor_vec.push(searchable_vendor_id.to_string());
             },
             Err(e) => println!("{:?}", e),
         }
     }
     let all_ids = read_to_string("/usr/share/hwdata/pci.ids")?;
     let mut gpu_names_vec: Vec<String> = Vec::new();
+    let mut found_vendor = false;
     let id_vec: Vec<&str> = all_ids.split('\n').collect();
     for line in id_vec {
-        if gpu_vec.iter().any(|id| line.contains(id)) {
-            let split_line = line.split("  ").collect::<Vec<&str>>()[1];
-            gpu_names_vec.push(split_line.trim().to_string());
+        if gpu_vendor_vec.iter().any(|vendor| line.starts_with(vendor)) {
+            found_vendor = true;
+        }
+        if found_vendor {
+            if gpu_dev_vec.iter().any(|device| line.contains(device)) {
+                let split_line = line.split("  ").collect::<Vec<&str>>()[1];
+                gpu_names_vec.push(split_line.trim().to_string());
+                found_vendor=false;
+            } else {
+                continue;
+            }
         }
     }
     Ok(gpu_names_vec)
