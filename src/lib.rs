@@ -24,7 +24,7 @@ pub fn temp() -> Result<Vec<(String, String)>, Error> {
 
     for path in paths {
         let path: std::path::PathBuf = path.unwrap();
-        let path_str: String = path.as_path().to_string_lossy().to_owned().to_string();
+        let path_str: String = path.as_path().to_string_lossy().into_owned().to_string();
         let zone_name: String = read_to_string(path_str.to_owned() + "/type")?.trim().to_owned();
         let temp: f64 = read_to_string(path_str.to_owned() + "/temp")?
             .trim()
