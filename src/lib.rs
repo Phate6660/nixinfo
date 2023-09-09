@@ -238,10 +238,13 @@ pub fn music() -> Result<String, Box<dyn std::error::Error>> {
     let na = "N/A".to_string();
     let tit = song.title.as_ref().unwrap();
     let art = song.artist.unwrap_or(na);
-    // TODO: Figure how the heck to actually accurately obtain the info from the tags without
-    // guesswork.
-    let alb = &song.tags[2].1; // tags[2].1 seems to be the album
-    let dat = &song.tags[4].1; // tags[4].1 seems to be the date
+    // To find the correct index of `Vec<(String, String)>` containing the proper metadata
+    // we're looking for, we iterate over it and match the position of the element containing
+    // metadata string we're looking for in the first element of the `tuple`.
+    let alb_index = &song.tags.iter().position(|x| x.0 == "Album").unwrap();
+    let dat_index = &song.tags.iter().position(|x| x.0 == "Date").unwrap();
+    let alb = &song.tags[*alb_index].1;
+    let dat = &song.tags[*dat_index].1;
     Ok(format!("{} - {} ({}) - {}", art, alb, dat, tit))
 }
 
