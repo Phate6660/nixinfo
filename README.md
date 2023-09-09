@@ -56,6 +56,8 @@ Otherwise add: `nixinfo = "0.3.2"` instead.
 - Get all package counts in pure Rust
   + apk
   + apt/dpkg
+    * explicitely installed
+    * ~~total installed~~
   + dnf
   + eopkg
   + flatpak

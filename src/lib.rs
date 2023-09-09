@@ -276,8 +276,17 @@ pub fn packages(manager: &str) -> Result<String, Error> {
             Ok(format!("{}", packages::count(output)))
         }
         "apt" | "dpkg" => {
-            let output = Command::new("dpkg").args(["--get-selections"]).output()?;
-            Ok(format!("{}", packages::count(output)))
+            let file = File::open("/var/lib/dpkg/status")?;
+            let file_contents = read(file)?;
+            let content_split = file_contents.split('\n');
+            let mut installed_vec: Vec<&str> = Vec::new();
+            for line in content_split {
+                if line.contains("install ok installed") {
+                    installed_vec.push(line);
+                }
+            }
+            let count = installed_vec.len();
+            Ok(format!("{}", count))
         }
         "dnf" => {
             let output = Command::new("dnf").args(["list", "installed"]).output()?;
