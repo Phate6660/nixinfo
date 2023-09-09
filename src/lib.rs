@@ -168,27 +168,11 @@ pub fn gpu() -> Result<Vec<String>, Error> {
     }
     let all_ids = read_to_string("/usr/share/hwdata/pci.ids")?;
     let mut gpu_names_vec: Vec<String> = Vec::new();
-    let mut gpu_1_found = false;
-    let mut gpu_2_found = false;
-    for line in all_ids.split('\n') {
-        match line {
-            _ if line.contains(&gpu_vec[0]) => {
-                if gpu_1_found {
-                    continue
-                }
-                let split_line = line.split(&gpu_vec[0]).collect::<Vec<&str>>()[1];
-                gpu_names_vec.push(split_line.trim().to_string());
-                gpu_1_found = true;
-            },
-            _ if line.contains(&gpu_vec[1]) => {
-                if gpu_2_found {
-                    continue
-                }
-                let split_line = line.split(&gpu_vec[1]).collect::<Vec<&str>>()[1];
-                gpu_names_vec.push(split_line.trim().to_string());
-                gpu_2_found = true;
-            },
-            _ => (),
+    let id_vec: Vec<&str> = all_ids.split('\n').collect();
+    for line in id_vec {
+        if gpu_vec.iter().any(|id| line.contains(id)) {
+            let split_line = line.split("  ").collect::<Vec<&str>>()[1];
+            gpu_names_vec.push(split_line.trim().to_string());
         }
     }
     Ok(gpu_names_vec)
